@@ -22,11 +22,18 @@ namespace Server.Core
 
             var cancellationTokenSource = new CancellationTokenSource();
 
-            var server = new Server(serverId, port.Value);
+            int keyRangeStart = 0;
+            int keyRangeEnd = 9999;
+            var server = new Server(serverId, port.Value, keyRangeStart, keyRangeEnd);
+
+            var dht = new DHT(10000);
+            dht.AddServer(server);
 
             var serverTask = server.StartAsync(cancellationTokenSource.Token);
 
             Console.WriteLine($"Serwer {serverId} uruchomiony na porcie {port}");
+
+            dht.DisplayDHTState();
 
             Console.WriteLine("Naciśnij Enter, aby zatrzymać serwer...");
             Console.ReadLine();

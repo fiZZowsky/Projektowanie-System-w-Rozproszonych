@@ -12,10 +12,15 @@ namespace Server.Core
         private readonly FileManager fileManager;
         private TcpListener tcpListener;
 
-        public Server(string serverId, int port)
+        public int KeyRangeStart { get; set; }
+        public int KeyRangeEnd { get; set; }
+
+        public Server(string serverId, int port, int keyRangeStart, int keyRangeEnd)
         {
             this.serverId = serverId;
             this.port = port;
+            this.KeyRangeStart = keyRangeStart;
+            this.KeyRangeEnd = keyRangeEnd;
             fileManager = new FileManager(serverId);
         }
 
@@ -44,6 +49,11 @@ namespace Server.Core
         {
             tcpListener.Stop();
             Console.WriteLine($"Serwer {serverId} zatrzymany.");
+        }
+
+        public string GetServerId()
+        {
+            return serverId;
         }
     }
 }
