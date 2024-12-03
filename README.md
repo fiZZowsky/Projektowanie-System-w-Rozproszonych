@@ -1,2 +1,2 @@
-FileHub - Aplikacja do zarządzania plikami w systemach rozproszonych
+#FileHub - Aplikacja do zarządzania plikami w systemach rozproszonych
 FileHub to aplikacja napisana w języku C# służąca do zarządzania plikami w systemie rozproszonym. Umożliwia ona łatwe i efektywne zarządzanie danymi pomiędzy wieloma serwerami, które komunikują się między sobą w sposób zdecentralizowany. System wykorzystuje technologię Distributed Hash Table (DHT) do przechowywania i wyszukiwania danych w sposób skalowalny i niezawodny.
