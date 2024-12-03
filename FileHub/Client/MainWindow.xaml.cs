@@ -19,6 +19,19 @@ namespace Client
         public MainWindow()
         {
             InitializeComponent();
+            ContentPresenter contentPresenter = this.FindName("ContentPresenter") as ContentPresenter;
+            if (contentPresenter != null)
+            {
+                contentPresenter.Content = new Views.LoginView();
+            }
+        }
+        public void ChangeView(UserControl newView)
+        {
+            ContentPresenter contentPresenter = this.FindName("ContentPresenter") as ContentPresenter;
+            if (contentPresenter != null)
+            {
+                contentPresenter.Content = newView;
+            }
         }
     }
 }

@@ -1,12 +1,22 @@
 ﻿<Window x:Class="Client.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Client"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        xmlns:local="clr-namespace:Client.Views"
+        Title="FileHub" Height="600" Width="800"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/appIcon.ico"
+        >
+    
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
+        <Border Grid.Row="0" Background="#F0F0F0" Padding="2" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1">
+            <Image Source="pack://application:,,,/Assets/logo.png" HorizontalAlignment="Center" VerticalAlignment="Center" Height="60" />
+        </Border>
+
+        <ContentPresenter x:Name="ContentPresenter" Grid.Row="1" />
     </Grid>
 </Window>
