@@ -1,8 +1,7 @@
-﻿using System.Net.Sockets;
+﻿using Server;
+using System.Net.Sockets;
 using System.Net;
 using System.Text;
-
-namespace Server.Services;
 
 public class MulticastService
 {
@@ -17,7 +16,18 @@ public class MulticastService
         Console.WriteLine($"[Multicast] Announced presence on port {port}.");
     }
 
-    public async Task ListenForServersAsync(Action<int> onServerDiscovered)
+    public void AnnounceShutdown(int port)
+    {
+        using var client = new UdpClient();
+        IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
+
+        byte[] message = Encoding.UTF8.GetBytes($"Shutdown:{port}");
+        client.Send(message, message.Length, endPoint);
+
+        Console.WriteLine($"[Multicast] Announced shutdown on port {port}.");
+    }
+
+    public async Task ListenForServersAsync(Action<int> onServerDiscovered, Action<int> onServerShutdown)
     {
         using var client = new UdpClient();
         IPEndPoint localEp = new IPEndPoint(IPAddress.Any, AppConfig.MulticastPort);
@@ -39,6 +49,11 @@ public class MulticastService
             {
                 int port = int.Parse(message.Substring("Server:".Length));
                 onServerDiscovered?.Invoke(port);
+            }
+            else if (message.StartsWith("Shutdown:"))
+            {
+                int port = int.Parse(message.Substring("Shutdown:".Length));
+                onServerShutdown?.Invoke(port);
             }
         }
     }

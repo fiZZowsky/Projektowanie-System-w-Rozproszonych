@@ -1,0 +1,92 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\multicastservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\services\\multicastservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\dhtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\services\\dhtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\serverservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\services\\serverservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ServerService.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\ServerService.cs",
+              "RelativeDocumentMoniker": "Server\\Services\\ServerService.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\ServerService.cs",
+              "RelativeToolTip": "Server\\Services\\ServerService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABYAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T13:05:52.648Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MulticastService.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\MulticastService.cs",
+              "RelativeDocumentMoniker": "Server\\Services\\MulticastService.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\MulticastService.cs",
+              "RelativeToolTip": "Server\\Services\\MulticastService.cs",
+              "ViewState": "AQIAAB0AAAAAAAAAAAA9wCAAAABUAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T13:05:51.622Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "DHTService.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\DHTService.cs",
+              "RelativeDocumentMoniker": "Server\\Services\\DHTService.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\DHTService.cs",
+              "RelativeToolTip": "Server\\Services\\DHTService.cs",
+              "ViewState": "AQIAAAsAAAAAAAAAAAAQwAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T13:05:42.507Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Program.cs",
+              "RelativeDocumentMoniker": "Server\\Program.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Program.cs",
+              "RelativeToolTip": "Server\\Program.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABcAAAA+AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T12:59:24.057Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

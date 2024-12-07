@@ -18,4 +18,8 @@
     <Protobuf Include="DistributedFileServer.proto" GrpcServices="Both" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
+
 </Project>
