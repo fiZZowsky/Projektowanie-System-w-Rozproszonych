@@ -1,13 +1,10 @@
 ﻿using Common.GRPC;
-using Common.Models;
 using Grpc.Core;
 
 namespace Server.Services
 {
     public class ServerService : DistributedFileServer.DistributedFileServerBase
     {
-
-
         public override Task<UploadResponse> UploadFile(UploadRequest request, ServerCallContext context)
         {
             Console.WriteLine($"[Upload] File received: {request.FileName}");

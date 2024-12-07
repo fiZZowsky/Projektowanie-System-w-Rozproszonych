@@ -1,30 +1,47 @@
 ﻿using Server.Services;
 using Server.Utils;
+using Server;
 
-namespace Server
+class Program
 {
-    class Program
+    static async Task Main(string[] args)
     {
-        static async Task Main(string[] args)
+        int port = PortManager.FindAvailablePort(AppConfig.StartPort, AppConfig.EndPort);
+
+        if (port == -1)
         {
-            int port = PortManager.FindAvailablePort(AppConfig.StartPort, AppConfig.EndPort);
+            Console.WriteLine($"No available port in range {AppConfig.StartPort}-{AppConfig.EndPort}. Exiting.");
+            return;
+        }
 
-            if (port == -1)
-            {
-                Console.WriteLine($"No available port in range {AppConfig.StartPort}-{AppConfig.EndPort}. Exiting.");
-                return;
-            }
+        var multicastService = new MulticastService();
+        var dhtService = new DHTService(port);
 
-            MulticastService multicastService = new MulticastService();
-            multicastService.AnnouncePresence(port);
+        multicastService.AnnouncePresence(port);
 
-            _ = Task.Run(() => multicastService.ListenForServersAsync(discoveredPort =>
+        _ = Task.Run(() => multicastService.ListenForServersAsync(
+            discoveredPort =>
             {
                 Console.WriteLine($"[Discovery] Found server on port {discoveredPort}.");
-            }));
+                dhtService.AddNode(discoveredPort);
+            },
+            shutdownPort =>
+            {
+                Console.WriteLine($"[Shutdown] Server on port {shutdownPort} has shut down.");
+                dhtService.RemoveNode(shutdownPort);
+            }
+        ));
 
-            ServerManager serverManager = new ServerManager(port);
+        ServerManager serverManager = new ServerManager(port);
+        try
+        {
+            dhtService.AddNode(port); // Dodaj lokalny serwer do DHT
             serverManager.Start();
+        }
+        finally
+        {
+            multicastService.AnnounceShutdown(port);
+            dhtService.RemoveNode(port); // Usuń lokalny serwer z DHT
         }
     }
 }
