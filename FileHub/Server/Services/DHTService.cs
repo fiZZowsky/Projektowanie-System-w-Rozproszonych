@@ -7,34 +7,47 @@ namespace Server.Services
 {
     internal class DHTService
     {
-        private readonly int _port = 5000;
+        private readonly int _port;
         private readonly List<DHTNode> _nodes = new List<DHTNode>();
 
-        public async Task DiscoverServersAsync()
+        public DHTService(int port)
         {
-            for (int port = 5000; port <= 6000; port++)
+            _port = port;
+        }
+        public void AddNode(int port)
+        {
+            var nodeHash = DHTManager.ComputeHash(port.ToString());
+            if (!_nodes.Any(n => n.Port == port))
             {
-                if (port == _port) continue;
-
-                try
-                {
-                    using var channel = GrpcChannel.ForAddress($"http://localhost:{port}");
-                    var client = new DistributedFileServer.DistributedFileServerClient(channel);
-
-                    var response = await client.PingAsync(new PingRequest());
-                    if (response.Success && !_nodes.Any(n => n.Port == port))
-                    {
-                        var nodeHash = DHTManager.ComputeHash(port.ToString());
-                        _nodes.Add(new DHTNode { Address = "localhost", Port = port, Hash = nodeHash });
-
-                        Console.WriteLine($"[Serwer {_port}] Wykryto nowy serwer: {port} (Hash: {nodeHash}).");
-                    }
-                }
-                catch
-                {
-                    // Serwer nie istnieje
-                }
+                _nodes.Add(new DHTNode { Address = "localhost", Port = port, Hash = nodeHash });
+                _nodes.Sort((a, b) => a.Hash.CompareTo(b.Hash));
+                Console.WriteLine($"[DHT] Added node: {port} (Hash: {nodeHash}).");
+                RecalculateResponsibilities();
             }
         }
+
+        public void RemoveNode(int port)
+        {
+            var node = _nodes.FirstOrDefault(n => n.Port == port);
+            if (node != null)
+            {
+                _nodes.Remove(node);
+                Console.WriteLine($"[DHT] Removed node: {port}.");
+                RecalculateResponsibilities();
+            }
+        }
+
+        private void RecalculateResponsibilities()
+        {
+            Console.WriteLine("[DHT] Recalculating responsibilities...");
+            foreach (var node in _nodes)
+            {
+                // Przykład: wypisz zakres odpowiedzialności
+                Console.WriteLine($"Node {node.Port}: Responsible for hash range...");
+                // Możesz dodać bardziej szczegółową logikę dla zakresów odpowiedzialności
+            }
+        }
+
+        public List<DHTNode> GetNodes() => _nodes;
     }
 }

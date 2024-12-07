@@ -3,16 +3,28 @@
   "WorkspaceRootPath": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\multicastservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\services\\multicastservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\dhtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\services\\dhtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\appconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\appconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\utils\\servermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\utils\\servermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\utils\\portmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|solutionrelative:server\\utils\\portmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{011FA95F-7CEF-471E-A459-99E4DDE8F58E}|Server\\Server.csproj|c:\\users\\piotrek\\desktop\\psr\\filehub\\server\\services\\serverservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -26,7 +38,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -35,6 +47,42 @@
             {
               "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "AppConfig.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\AppConfig.cs",
+              "RelativeDocumentMoniker": "Server\\AppConfig.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\AppConfig.cs",
+              "RelativeToolTip": "Server\\AppConfig.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAkAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T16:07:35.329Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ServerManager.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Utils\\ServerManager.cs",
+              "RelativeDocumentMoniker": "Server\\Utils\\ServerManager.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Utils\\ServerManager.cs",
+              "RelativeToolTip": "Server\\Utils\\ServerManager.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAACAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T16:07:28.495Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "PortManager.cs",
+              "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Utils\\PortManager.cs",
+              "RelativeDocumentMoniker": "Server\\Utils\\PortManager.cs",
+              "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Utils\\PortManager.cs",
+              "RelativeToolTip": "Server\\Utils\\PortManager.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABgAAAAJAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-12-07T16:07:12.668Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "ServerService.cs",
               "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\ServerService.cs",
               "RelativeDocumentMoniker": "Server\\Services\\ServerService.cs",
@@ -42,18 +90,17 @@
               "RelativeToolTip": "Server\\Services\\ServerService.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABYAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-12-07T13:05:52.648Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-12-07T13:05:52.648Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "MulticastService.cs",
               "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\MulticastService.cs",
               "RelativeDocumentMoniker": "Server\\Services\\MulticastService.cs",
               "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\MulticastService.cs",
               "RelativeToolTip": "Server\\Services\\MulticastService.cs",
-              "ViewState": "AQIAAB0AAAAAAAAAAAA9wCAAAABUAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAACsAAAAJAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-12-07T13:05:51.622Z",
               "EditorCaption": ""
@@ -66,23 +113,21 @@
               "RelativeDocumentMoniker": "Server\\Services\\DHTService.cs",
               "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Services\\DHTService.cs",
               "RelativeToolTip": "Server\\Services\\DHTService.cs",
-              "ViewState": "AQIAAAsAAAAAAAAAAAAQwAAAAAAAAAAA",
+              "ViewState": "AQIAAAYAAAAAAAAAAAAAADEAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-12-07T13:05:42.507Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-12-07T13:05:42.507Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Program.cs",
               "RelativeDocumentMoniker": "Server\\Program.cs",
               "ToolTip": "C:\\Users\\Piotrek\\Desktop\\PSR\\FileHub\\Server\\Program.cs",
               "RelativeToolTip": "Server\\Program.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABcAAAA+AAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAACcAAAAJAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-12-07T12:59:24.057Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-12-07T12:59:24.057Z"
             }
           ]
         }

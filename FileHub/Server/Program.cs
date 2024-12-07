@@ -1,4 +1,5 @@
-﻿using Server.Utils;
+﻿using Server.Services;
+using Server.Utils;
 using Server;
 
 class Program
@@ -13,22 +14,34 @@ class Program
             return;
         }
 
-        MulticastService multicastService = new MulticastService();
+        var multicastService = new MulticastService();
+        var dhtService = new DHTService(port);
+
         multicastService.AnnouncePresence(port);
 
         _ = Task.Run(() => multicastService.ListenForServersAsync(
-            discoveredPort => Console.WriteLine($"[Discovery] Found server on port {discoveredPort}."),
-            shutdownPort => Console.WriteLine($"[Shutdown] Server on port {shutdownPort} has shut down.")
+            discoveredPort =>
+            {
+                Console.WriteLine($"[Discovery] Found server on port {discoveredPort}.");
+                dhtService.AddNode(discoveredPort);
+            },
+            shutdownPort =>
+            {
+                Console.WriteLine($"[Shutdown] Server on port {shutdownPort} has shut down.");
+                dhtService.RemoveNode(shutdownPort);
+            }
         ));
 
         ServerManager serverManager = new ServerManager(port);
         try
         {
+            dhtService.AddNode(port); // Dodaj lokalny serwer do DHT
             serverManager.Start();
         }
         finally
         {
             multicastService.AnnounceShutdown(port);
+            dhtService.RemoveNode(port); // Usuń lokalny serwer z DHT
         }
     }
 }
