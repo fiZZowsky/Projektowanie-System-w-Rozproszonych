@@ -1,7 +1,5 @@
-﻿using Common.GRPC;
-using Common.Models;
-using Common.Utils;
-using Grpc.Net.Client;
+﻿using Common.Models;
+using Server.Utils;
 
 namespace Server.Services
 {
@@ -42,7 +40,6 @@ namespace Server.Services
             Console.WriteLine("[DHT] Recalculating responsibilities...");
             foreach (var node in _nodes)
             {
-                // Przykład: wypisz zakres odpowiedzialności
                 Console.WriteLine($"Node {node.Port}: Responsible for hash range...");
                 // Możesz dodać bardziej szczegółową logikę dla zakresów odpowiedzialności
             }

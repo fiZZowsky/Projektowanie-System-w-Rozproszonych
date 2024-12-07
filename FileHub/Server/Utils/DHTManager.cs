@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Common.Utils
+namespace Server.Utils
 {
     public static class DHTManager
     {
