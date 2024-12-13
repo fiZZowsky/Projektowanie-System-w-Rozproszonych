@@ -5,26 +5,51 @@ namespace Server.Services
 {
     public class ServerService : DistributedFileServer.DistributedFileServerBase
     {
-        public override Task<UploadResponse> UploadFile(UploadRequest request, ServerCallContext context)
+        private readonly string _path;
+        private FilesService _filesService;
+
+        public ServerService(string filesDirectoryPath)
         {
-            Console.WriteLine($"[Upload] File received: {request.FileName}");
-            return Task.FromResult(new UploadResponse { Success = true });
+            _path = filesDirectoryPath;
+            _filesService = new FilesService(filesDirectoryPath);
         }
 
-        public override Task<DownloadResponse> DownloadFile(DownloadRequest request, ServerCallContext context)
+        public override async Task<UploadResponse> UploadFile(UploadRequest request, ServerCallContext context)
         {
-            Console.WriteLine($"[Download] File requested: {request.FileName}");
-            return Task.FromResult(new DownloadResponse
+            try
             {
-                FileContent = Google.Protobuf.ByteString.CopyFrom(new byte[0]),
-                Success = true
-            });
+                Console.WriteLine($"[Upload] [{request.CreationDate}] File received: {request.FileName}.{request.FileType}");
+                var response = await _filesService.SaveFile(request);
+                Console.WriteLine($"[Upload] {request.FileName}.{request.FileType} Status successed: {response.Success}");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new UploadResponse
+                {
+                    Success = false,
+                    Message = $"Error uploading file: {ex.Message}"
+                };
+            }
         }
 
-        public override Task<PingResponse> Ping(PingRequest request, ServerCallContext context)
+        public override async Task<DownloadResponse> DownloadFile(DownloadRequest request, ServerCallContext context)
         {
-            Console.WriteLine("[Ping] Received ping request");
-            return Task.FromResult(new PingResponse { Success = true });
+            try
+            {
+                //Console.WriteLine($"[Download] Requested by: {request.UserId}");
+                var response = await _filesService.GetUserFiles(request);
+                Console.WriteLine($"[Download] {request.UserId} Status seccessed: {response.Success}");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new DownloadResponse
+                {
+                    Success = false,
+                    Message = $"Error downloading files: {ex.Message}"
+                };
+            }
         }
     }
 }

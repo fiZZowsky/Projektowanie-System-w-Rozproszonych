@@ -2,32 +2,39 @@
 
 package Common.gRPC;
 
+import "google/protobuf/timestamp.proto";
+
 service DistributedFileServer {
     rpc UploadFile (UploadRequest) returns (UploadResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
-    rpc Ping (PingRequest) returns (PingResponse);
 }
 
 message UploadRequest {
     string fileName = 1;
     bytes fileContent = 2;
+    string fileType = 3;
+    google.protobuf.Timestamp creationDate = 4;
+    string userId = 5;
 }
 
 message UploadResponse {
     bool success = 1;
+    string message = 2;
 }
 
 message DownloadRequest {
+    string userId = 1;
+}
+
+message FileData {
     string fileName = 1;
+    bytes fileContent = 2;
+    string fileType = 3;
+    google.protobuf.Timestamp creationDate = 4;
 }
 
 message DownloadResponse {
-    bytes fileContent = 1;
-    bool success = 2;
-}
-
-message PingRequest {}
-
-message PingResponse {
     bool success = 1;
+    string message = 2;
+    repeated FileData files = 3;
 }
