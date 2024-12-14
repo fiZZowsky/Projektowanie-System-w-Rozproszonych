@@ -7,15 +7,14 @@ public static class PortManager
 {
     public static int FindAvailablePort(int startPort, int endPort)
     {
-        Random random = new Random();
-        for (int i = 0; i < 10; i++)
+        for (int port = startPort; port <= endPort; port++)
         {
-            int port = random.Next(startPort, endPort + 1);
             if (IsPortAvailable(port))
             {
                 return port;
             }
         }
+        Console.WriteLine("No ports available within the specified range.");
         return -1;
     }
 
