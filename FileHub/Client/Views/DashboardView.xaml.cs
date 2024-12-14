@@ -13,6 +13,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Microsoft.Win32;
+using Client.Services;
+using System.IO;
 
 namespace Client.Views
 {
@@ -21,6 +23,7 @@ namespace Client.Views
     /// </summary>
     public partial class DashboardView : UserControl
     {
+        private WatcherService _folderWatcher;
         public DashboardView()
         {
             InitializeComponent();
@@ -45,9 +48,19 @@ namespace Client.Views
                 FolderPathTextBox.Text = selectedPath;
             }
         }
-        private void SyncFilesButton_Click(object sender, RoutedEventArgs e)
+        private async void SyncFilesButton_Click(object sender, RoutedEventArgs e)
         {
-            System.Windows.MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
+            {
+                var clientService = new ClientService("http://localhost:5000");
+                _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
+
+                MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Wybierz poprawny folder przed synchronizacją.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
         private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
         {

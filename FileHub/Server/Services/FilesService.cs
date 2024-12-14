@@ -1,5 +1,5 @@
 ﻿using Common.GRPC;
-using Server.Converters;
+using Common.Converters;
 
 namespace Server.Services;
 
@@ -19,7 +19,6 @@ public class FilesService
 
         await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
 
-        new MulticastService().AnnounceFileChange(filePath, "ADD");
 
         return new UploadResponse { Success = true, Message = "File uploaded successfully." };
     }

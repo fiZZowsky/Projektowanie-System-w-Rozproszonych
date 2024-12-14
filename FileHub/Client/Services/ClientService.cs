@@ -1,4 +1,6 @@
-﻿using Common.GRPC;
+﻿using Common.Converters;
+using Common.GRPC;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
 using static Common.GRPC.DistributedFileServer;
@@ -19,10 +21,17 @@ namespace Client.Services
             using var channel = GrpcChannel.ForAddress(_serverAddress);
             var client = new DistributedFileServerClient(channel);
 
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            string fileExtension = Path.GetExtension(fileName).Replace(".", "");
+            Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
+
             var response = await client.UploadFileAsync(new UploadRequest
             {
-                FileName = fileName,
-                FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent)
+                FileName = fileNameWithoutExtension,
+                FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
+                FileType = fileExtension,
+                CreationDate = creationDate,
+                UserId = "user123"
             });
 
             if (response.Success)
@@ -35,25 +44,46 @@ namespace Client.Services
             }
         }
 
-        public async Task DownloadFileAsync(string fileName)
+        public async Task DownloadFileAsync(string userId)
         {
             using var channel = GrpcChannel.ForAddress(_serverAddress);
             var client = new DistributedFileServerClient(channel);
 
             var response = await client.DownloadFileAsync(new DownloadRequest
             {
+                UserId = userId
+            });
+
+            //if (response.Success)
+            //{
+            //    File.WriteAllBytes(fileName, response.FileContent.ToByteArray());
+            //    Console.WriteLine($"Plik {fileName} pobrany.");
+            //}
+            //else
+            //{
+            //    Console.WriteLine($"Błąd podczas pobierania plikow dla uzytkownika {fileName}.");
+            //}
+        }
+
+        public async Task NotifyFileDeletedAsync(string fileName)
+        {
+            using var channel = GrpcChannel.ForAddress(_serverAddress);
+            var client = new DistributedFileServerClient(channel);
+
+            var response = await client.DeleteFileAsync(new DeleteRequest
+            {
                 FileName = fileName
             });
 
             if (response.Success)
             {
-                File.WriteAllBytes(fileName, response.FileContent.ToByteArray());
-                Console.WriteLine($"Plik {fileName} pobrany.");
+                Console.WriteLine($"[Client] Plik {fileName} został usunięty na serwerze.");
             }
             else
             {
-                Console.WriteLine($"Błąd podczas pobierania pliku {fileName}.");
+                Console.WriteLine($"[Client] Błąd podczas usuwania pliku {fileName}.");
             }
         }
     }
+
 }
