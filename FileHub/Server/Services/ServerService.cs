@@ -37,7 +37,7 @@ namespace Server.Services
         {
             try
             {
-                //Console.WriteLine($"[Download] Requested by: {request.UserId}");
+                Console.WriteLine($"[Download] Requested by: {request.UserId}");
                 var response = await _filesService.GetUserFiles(request);
                 Console.WriteLine($"[Download] {request.UserId} Status seccessed: {response.Success}");
                 return response;

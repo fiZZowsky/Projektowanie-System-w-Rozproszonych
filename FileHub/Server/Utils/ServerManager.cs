@@ -17,16 +17,19 @@ public class ServerManager
     public void Start()
     {
         var uniqueId = Guid.NewGuid().ToString();
-        _storageDirectory = Path.Combine(_storageDirectory, $"{_port}_{uniqueId}");
+        var serverPrefix = $"{_port}_";
+        var serverDirectories = Directory.GetDirectories(_storageDirectory, $"{serverPrefix}*");
 
-        if (!Directory.Exists(_storageDirectory))
+        if (serverDirectories.Length == 0)
         {
+            _storageDirectory = Path.Combine(_storageDirectory, $"{serverPrefix}_{uniqueId}");
             Directory.CreateDirectory(_storageDirectory);
             Console.WriteLine($"[Server {_port}] Created storage directory: {_storageDirectory}");
         }
         else
         {
-            Console.WriteLine($"[Server {_port}] Storage directory already exists: {_storageDirectory}");
+            _storageDirectory = serverDirectories[0];
+            Console.WriteLine($"[Server {_port}] Using existing storage directory: {_storageDirectory}");
         }
 
         var server = new Grpc.Core.Server
