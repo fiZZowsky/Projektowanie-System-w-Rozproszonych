@@ -1,6 +1,6 @@
 ﻿using Common.GRPC;
 
-namespace Server.Converters;
+namespace Common.Converters;
 
 public class FormatConverter
 {

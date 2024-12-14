@@ -27,17 +27,17 @@ public class MulticastService
         Console.WriteLine($"[Multicast] Announced shutdown on port {port}.");
     }
 
-    public void AnnounceFileChange(string filePath, string changeType)
-    {
-        using var client = new UdpClient();
-        IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
+    //public void AnnounceFileChange(string filePath, string changeType)
+    //{
+    //    using var client = new UdpClient();
+    //    IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
 
-        string message = $"FileChange:{changeType}:{filePath}";
-        byte[] data = Encoding.UTF8.GetBytes(message);
-        client.Send(data, data.Length, endPoint);
+    //    string message = $"FileChange:{changeType}:{filePath}";
+    //    byte[] data = Encoding.UTF8.GetBytes(message);
+    //    client.Send(data, data.Length, endPoint);
 
-        Console.WriteLine($"[Multicast] Announced file change: {changeType} {filePath}");
-    }
+    //    Console.WriteLine($"[Multicast] Announced file change: {changeType} {filePath}");
+    //}
 
     public async Task ListenForServersAsync(Action<int> onServerDiscovered, Action<int> onServerShutdown)
     {
@@ -67,20 +67,20 @@ public class MulticastService
                 int port = int.Parse(message.Substring("Shutdown:".Length));
                 onServerShutdown?.Invoke(port);
             }
-            else if (message.StartsWith("FileChange:"))
-            {
-                string[] parts = message.Split(':');
-                string changeType = parts[1];
-                string filePath = parts[2];
+            //else if (message.StartsWith("FileChange:"))
+            //{
+            //    string[] parts = message.Split(':');
+            //    string changeType = parts[1];
+            //    string filePath = parts[2];
 
-                Console.WriteLine($"[FileChange] {changeType}: {filePath}");
+            //    Console.WriteLine($"[FileChange] {changeType}: {filePath}");
 
-                if (changeType == "DELETE" && File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                    Console.WriteLine($"[FileChange] Deleted {filePath}");
-                }
-            }
+            //    if (changeType == "DELETE" && File.Exists(filePath))
+            //    {
+            //        File.Delete(filePath);
+            //        Console.WriteLine($"[FileChange] Deleted {filePath}");
+            //    }
+            //}
         }
     }
 }

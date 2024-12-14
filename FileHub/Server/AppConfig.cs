@@ -19,9 +19,4 @@ public class AppConfig
             return dataStoragePath;
         }
     }
-
-    public static List<string> UserPaths = new List<string>
-    {
-        @"C:\Users\vitar\Documents\FileHub"
-    };
 }

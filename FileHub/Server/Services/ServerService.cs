@@ -51,5 +51,21 @@ namespace Server.Services
                 };
             }
         }
+        public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
+        {
+            string filePath = Path.Combine(_path, request.FileName);
+
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+                Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
+                return new DeleteResponse { Success = true, Message = "Plik usunięty." };
+            }
+            else
+            {
+                return new DeleteResponse { Success = false, Message = "Plik nie znaleziony." };
+            }
+        }
+
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Google.Protobuf.WellKnownTypes;
 
-namespace Server.Converters
+namespace Common.Converters
 {
     public static class DateTimeConverter
     {
