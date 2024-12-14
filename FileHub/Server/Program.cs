@@ -19,6 +19,15 @@ class Program
 
         multicastService.AnnouncePresence(port);
 
+        List<string> userPaths = AppConfig.UserPaths;
+
+        foreach (string path in userPaths)
+        {
+            Console.WriteLine($"[Startup] Initializing file watcher for path: {path}");
+            var folderWatcher = new WatcherService(path);
+            folderWatcher.StartWatching();
+        }
+
         _ = Task.Run(() => multicastService.ListenForServersAsync(
             discoveredPort =>
             {
