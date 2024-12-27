@@ -6,12 +6,14 @@ namespace Server.Utils;
 public class ServerManager
 {
     private readonly int _port;
+    private readonly DHTService _dhtService;
     private string _storageDirectory;
 
-    public ServerManager(string defaultStoragePath, int port)
+    public ServerManager(string defaultStoragePath, int port, DHTService dhtService)
     {
         _storageDirectory = defaultStoragePath;
         _port = port;
+        _dhtService = dhtService;
     }
 
     public void Start()
@@ -34,7 +36,7 @@ public class ServerManager
 
         var server = new Grpc.Core.Server
         {
-            Services = { Common.GRPC.DistributedFileServer.BindService(new ServerService(_storageDirectory)) },
+            Services = { Common.GRPC.DistributedFileServer.BindService(new ServerService(_storageDirectory, _dhtService)) },
             Ports = { new ServerPort("localhost", _port, ServerCredentials.Insecure) }
         };
 

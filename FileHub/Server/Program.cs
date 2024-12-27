@@ -32,7 +32,7 @@ class Program
             }
         ));
 
-        ServerManager serverManager = new ServerManager(AppConfig.DefaultFilesStoragePath, port);
+        ServerManager serverManager = new ServerManager(AppConfig.DefaultFilesStoragePath, port, dhtService);
         try
         {
             dhtService.AddNode(port); // Dodaj lokalny serwer do DHT

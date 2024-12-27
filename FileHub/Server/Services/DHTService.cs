@@ -3,7 +3,7 @@ using Server.Utils;
 
 namespace Server.Services
 {
-    internal class DHTService
+    public class DHTService
     {
         private readonly int _port;
         private readonly List<DHTNode> _nodes = new List<DHTNode>();

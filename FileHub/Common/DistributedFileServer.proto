@@ -32,6 +32,7 @@ message FileData {
     bytes fileContent = 2;
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
+    string serverAddress = 5;
 }
 
 message DownloadResponse {
