@@ -1,5 +1,7 @@
-﻿using Common.Converters;
+﻿using Client.Utils;
+using Common.Converters;
 using Common.GRPC;
+using Common.Models;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
@@ -16,9 +18,28 @@ namespace Client.Services
             _serverAddress = serverAddress;
         }
 
-        public async Task UploadFileAsync(string fileName, byte[] fileContent)
+        public async Task<List<NodeInfo>> GetAvailableServersAsync()
         {
             using var channel = GrpcChannel.ForAddress(_serverAddress);
+            var client = new DistributedFileServerClient(channel);
+
+            var response = await client.GetNodesAsync(new Empty());
+            return response.Nodes.ToList();
+        }
+
+        private NodeInfo FindResponsibleServer(string fileName, List<NodeInfo> availableServers)
+        {
+            int hash = Math.Abs(fileName.GetHashCode());
+            int serverIndex = hash % availableServers.Count; // Równomierne rozproszenie po serwerach
+            return availableServers[serverIndex];
+        }
+
+        public async Task UploadFileAsync(string fileName, byte[] fileContent)
+        {
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(fileName, availableServers);
+
+            using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
             var client = new DistributedFileServerClient(channel);
 
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
@@ -31,12 +52,12 @@ namespace Client.Services
                 FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
                 FileType = fileExtension,
                 CreationDate = creationDate,
-                UserId = "user123"
+                UserId = Session.UserId
             });
 
             if (response.Success)
             {
-                Console.WriteLine($"Plik {fileName} przesłany.");
+                Console.WriteLine($"Plik {fileName} przesłany na serwer {responsibleServer.Address}:{responsibleServer.Port}");
             }
             else
             {
@@ -54,15 +75,16 @@ namespace Client.Services
                 UserId = userId
             });
 
-            //if (response.Success)
-            //{
-            //    File.WriteAllBytes(fileName, response.FileContent.ToByteArray());
-            //    Console.WriteLine($"Plik {fileName} pobrany.");
-            //}
-            //else
-            //{
-            //    Console.WriteLine($"Błąd podczas pobierania plikow dla uzytkownika {fileName}.");
-            //}
+            if (response.Success)
+            {
+                string fileName = $"{response.FileName}.{response.FileType}";
+                File.WriteAllBytes(fileName, response.FileContent.ToByteArray());
+                Console.WriteLine($"Plik {fileName} pobrany.");
+            }
+            else
+            {
+                Console.WriteLine($"Błąd podczas pobierania plików dla użytkownika {userId}: {response.Message}");
+            }
         }
 
         public async Task NotifyFileDeletedAsync(string fileName)
@@ -85,5 +107,4 @@ namespace Client.Services
             }
         }
     }
-
 }

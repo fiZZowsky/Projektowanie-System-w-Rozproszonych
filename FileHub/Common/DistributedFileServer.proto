@@ -7,7 +7,9 @@ import "google/protobuf/timestamp.proto";
 service DistributedFileServer {
     rpc UploadFile (UploadRequest) returns (UploadResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
+    rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
     rpc DeleteFile (DeleteRequest) returns (DeleteResponse);
+    rpc TransferFile (TransferRequest) returns (TransferResponse);
 }
 
 message UploadRequest {
@@ -27,15 +29,32 @@ message DownloadRequest {
     string userId = 1;
 }
 
+message DownloadByServerRequest {
+    string fileName = 1;
+}
+
+message TransferRequest {
+    string fileName = 1;
+    bytes fileContent = 2;
+    string fileType = 3;
+    google.protobuf.Timestamp creationDate = 4;
+    string userId = 5;
+}
+
 message FileData {
     string fileName = 1;
     bytes fileContent = 2;
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
-    string serverAddress = 5;
 }
 
 message DownloadResponse {
+    bool success = 1;
+    string message = 2;
+    repeated FileData files = 3;
+}
+
+message DownloadByServerResponse {
     bool success = 1;
     string message = 2;
     repeated FileData files = 3;
@@ -46,6 +65,11 @@ message DeleteRequest {
 }
 
 message DeleteResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message TransferResponse {
     bool success = 1;
     string message = 2;
 }

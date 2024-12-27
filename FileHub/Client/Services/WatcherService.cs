@@ -28,19 +28,33 @@ namespace Client.Services
 
         private async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
-
-            if (File.Exists(e.FullPath))
+            try
             {
-                var fileContent = File.ReadAllBytes(e.FullPath);
-                await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                Console.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
+
+                if (File.Exists(e.FullPath))
+                {
+                    var fileContent = File.ReadAllBytes(e.FullPath);
+                    await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas przesyłania pliku {e.FullPath}: {ex.Message}");
             }
         }
 
         private async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
-            await _clientService.NotifyFileDeletedAsync(e.FullPath);
+            try
+            {
+                Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
+                await _clientService.NotifyFileDeletedAsync(e.FullPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas usuwania pliku {e.FullPath}: {ex.Message}");
+            }
         }
 
         private async void OnFileRenamed(object sender, RenamedEventArgs e)

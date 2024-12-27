@@ -1,4 +1,5 @@
 ﻿using Common.GRPC;
+using Google.Protobuf;
 using Grpc.Core;
 using Server.Utils;
 
@@ -72,6 +73,28 @@ namespace Server.Services
                 };
             }
         }
+
+        public override async Task<DownloadResponse> DownloadByServerFile(DownloadRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var filePath = Path.Combine("path_to_files", request.FileName);
+                if (File.Exists(filePath))
+                {
+                    var fileContent = await File.ReadAllBytesAsync(filePath);
+                    return new DownloadResponse { Success = true, FileContent = ByteString.CopyFrom(fileContent) };
+                }
+                else
+                {
+                    return new DownloadResponse { Success = false, Message = "File not found." };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new DownloadResponse { Success = false, Message = $"Error downloading file: {ex.Message}" };
+            }
+        }
+
         public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
         {
             string filePath = Path.Combine(_path, request.FileName);
@@ -88,5 +111,18 @@ namespace Server.Services
             }
         }
 
+        public override async Task<TransferResponse> TransferFile(TransferRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var filePath = Path.Combine("_path", request.FileName);
+                await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
+                return new TransferResponse { Success = true, Message = "File transferred successfully." };
+            }
+            catch (Exception ex)
+            {
+                return new TransferResponse { Success = false, Message = $"Error transferring file: {ex.Message}" };
+            }
+        }
     }
 }
