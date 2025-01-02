@@ -5,6 +5,10 @@ using Common.Models;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Cryptography;
+using System.Text;
+using System.Windows.Input;
 using static Common.GRPC.DistributedFileServer;
 
 namespace Client.Services
@@ -104,6 +108,24 @@ namespace Client.Services
             else
             {
                 Console.WriteLine($"[Client] Błąd podczas usuwania pliku {fileName}.");
+            }
+        }
+
+        public async Task RegisterUserAsync(string username, string password)
+        {
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Encoding.UTF8.GetBytes(key);
+                aes.IV = new byte[16];
+
+                using (MemoryStream memoryStream = new MemoryStream())
+                using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    byte[] plainBytes = Encoding.UTF8.GetBytes(password);
+                    cryptoStream.Write(plainBytes, 0, plainBytes.Length);
+                    cryptoStream.FlushFinalBlock();
+                    var encryptedPassword = Convert.ToBase64String(memoryStream.ToArray());
+                }
             }
         }
     }

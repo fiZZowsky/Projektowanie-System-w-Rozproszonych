@@ -41,6 +41,11 @@ message TransferRequest {
     string userId = 5;
 }
 
+message UserDataRequest {
+    string username = 1;
+    string password = 2;
+}
+
 message FileData {
     string fileName = 1;
     bytes fileContent = 2;
@@ -72,4 +77,11 @@ message DeleteResponse {
 message TransferResponse {
     bool success = 1;
     string message = 2;
+}
+
+message UserDataResponse {
+    string userId = 1;
+    string username = 2;
+    bool success = 3;
+    string message = 4;
 }
