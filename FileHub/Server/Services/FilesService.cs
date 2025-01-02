@@ -18,21 +18,6 @@ public class FilesService
 
     public async Task<UploadResponse> SaveFile(UploadRequest request)
     {
-        var availableNodes = _dhtService.GetNodes();
-        var node = DHTManager.FindResponsibleNode(request.FileName, availableNodes);
-        if(node.Port != AppConfig.MulticastPort)
-        {
-            bool success = await SendFileToServer(request, node.Address, node.Port);
-            if (success)
-            {
-                return new UploadResponse { Success = true, Message = "File uploaded to the responsible server." };
-            }
-            else
-            {
-                return new UploadResponse { Success = false, Message = "Failed to upload file to responsible server." };
-            }
-        }
-
         string creationDate = FormatConverter.SanitizeFileName(DateTimeConverter.ConvertToDateTime(request.CreationDate).ToString("yyyyMMdd-HHmmss"));
         var fileName = $"{request.FileName}_{request.FileType}_{request.UserId}_{creationDate}_{Guid.NewGuid()}";
         var filePath = Path.Combine(_path, fileName);

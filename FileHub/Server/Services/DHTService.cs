@@ -89,17 +89,20 @@ namespace Server.Services
                 var targetClient = new DistributedFileServer.DistributedFileServerClient(targetChannel);
 
                 // Pobieramy plik z serwera źródłowego
-                var fileContentResponse = await sourceClient.DownloadFileByServer(new DownloadByServerRequest { FileName = fileName });
+                var fileContentResponse = await sourceClient.DownloadFileByServerAsync(new DownloadByServerRequest { FileName = fileName });
 
-                if (fileContentResponse.Success)
+                if (fileContentResponse.Success && fileContentResponse.Files.Count > 0)
                 {
+                    var fileData = fileContentResponse.Files[0];
                     // Przekazujemy plik na nowy serwer
                     var transferResponse = await targetClient.TransferFileAsync(new TransferRequest
                     {
                         FileName = fileName,
-                        FileContent = fileContentResponse.FileContent
+                        FileContent = fileData.FileContent,
+                        FileType = fileData.FileType,
+                        CreationDate = fileData.CreationDate,
+                        UserId = fileData.UserId
                     });
-
                     if (transferResponse.Success)
                     {
                         Console.WriteLine($"[DHT] File {fileName} transferred successfully from {sourceNode.Port} to {targetNode.Port}.");
@@ -127,5 +130,6 @@ namespace Server.Services
         }
 
         public List<DHTNode> GetNodes() => _nodes;
+        public int GetServerPort() => _port;
     }
 }

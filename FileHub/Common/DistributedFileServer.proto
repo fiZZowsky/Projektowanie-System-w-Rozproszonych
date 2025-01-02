@@ -3,8 +3,10 @@
 package Common.gRPC;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 service DistributedFileServer {
+    rpc GetNodes (google.protobuf.Empty) returns (NodeListResponse);
     rpc UploadFile (UploadRequest) returns (UploadResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
     rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
@@ -51,6 +53,16 @@ message FileData {
     bytes fileContent = 2;
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
+    string userId = 5;
+}
+
+message NodeListResponse {
+    repeated NodeInfo nodes = 1;
+}
+
+message NodeInfo {
+    string address = 1;
+    int32 port = 2;
 }
 
 message DownloadResponse {

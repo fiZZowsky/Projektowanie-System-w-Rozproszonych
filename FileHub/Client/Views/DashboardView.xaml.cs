@@ -38,18 +38,27 @@ namespace Client.Views
         }
         private async void SyncFilesButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
+            try
             {
-                var clientService = new ClientService("http://localhost:5000");
-                _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
+                if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
+                {
+                    var clientService = new ClientService("http://localhost:5000");
+                    _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
 
-                MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Wybierz poprawny folder przed synchronizacją.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Wybierz poprawny folder przed synchronizacją.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Console.WriteLine($"Błąd podczas synchronizacji plików: {ex.Message}");
+                MessageBox.Show($"Błąd podczas synchronizacji plików: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);

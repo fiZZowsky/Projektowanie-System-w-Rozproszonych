@@ -1,5 +1,7 @@
-﻿using Common.GRPC;
+﻿using Common.Converters;
+using Common.GRPC;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Server.Utils;
 
@@ -17,6 +19,12 @@ namespace Server.Services
             _dhtService = dhtService;
             _filesService = new FilesService(filesDirectoryPath, _dhtService);
         }
+        
+        public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)
+        {
+            var nodes = _dhtService.GetNodes();
+            return ModelConverter.FromDHTNodes(nodes);
+        }
 
         public override async Task<UploadResponse> UploadFile(UploadRequest request, ServerCallContext context)
         {
@@ -27,7 +35,7 @@ namespace Server.Services
                 var availableNodes = _dhtService.GetNodes();
                 var node = DHTManager.FindResponsibleNode(request.FileName, availableNodes);
 
-                if (node.Port != AppConfig.MulticastPort) // Jeśli inny serwer odpowiada za plik
+                if (node.Port != _dhtService.GetServerPort()) // Jeśli inny serwer odpowiada za plik
                 {
                     Console.WriteLine($"[Redirect] Forwarding upload to server at {node.Address}:{node.Port}");
                     bool success = await _filesService.SendFileToServer(request, node.Address, node.Port);
@@ -47,6 +55,7 @@ namespace Server.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Błąd podczas przesyłania pliku: {ex.Message}");
                 return new UploadResponse
                 {
                     Success = false,
@@ -74,24 +83,47 @@ namespace Server.Services
             }
         }
 
-        public override async Task<DownloadResponse> DownloadByServerFile(DownloadRequest request, ServerCallContext context)
+        public override async Task<DownloadByServerResponse> DownloadFileByServer(DownloadByServerRequest request, ServerCallContext context)
         {
             try
             {
-                var filePath = Path.Combine("path_to_files", request.FileName);
+                var filePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName + "\\Server\\DataStorage\\", request.FileName);
                 if (File.Exists(filePath))
                 {
                     var fileContent = await File.ReadAllBytesAsync(filePath);
-                    return new DownloadResponse { Success = true, FileContent = ByteString.CopyFrom(fileContent) };
+                    var fileData = new FileData
+                    {
+                        FileName = request.FileName,
+                        FileContent = ByteString.CopyFrom(fileContent),
+                        FileType = "application/octet-stream", // Zmień w zależności od typu pliku
+                        CreationDate = Timestamp.FromDateTime(File.GetCreationTime(filePath).ToUniversalTime())
+                    };
+
+                    return new DownloadByServerResponse
+                    {
+                        Success = true,
+                        Message = "File successfully retrieved.",
+                        Files = { fileData }
+                    };
                 }
                 else
                 {
-                    return new DownloadResponse { Success = false, Message = "File not found." };
+                    return new DownloadByServerResponse
+                    {
+                        Success = false,
+                        Message = "File not found.",
+                        Files = { }
+                    };
                 }
             }
             catch (Exception ex)
             {
-                return new DownloadResponse { Success = false, Message = $"Error downloading file: {ex.Message}" };
+                return new DownloadByServerResponse
+                {
+                    Success = false,
+                    Message = $"Error downloading file: {ex.Message}",
+                    Files = { }
+                };
             }
         }
 

@@ -1,5 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.Windows;
 
 namespace Client.Services
 {
@@ -32,8 +32,21 @@ namespace Client.Services
             {
                 Console.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
 
+                const int maxFileSize = 4 * 1024 * 1024; // 4 MB
+
                 if (File.Exists(e.FullPath))
                 {
+                    var fileInfo = new FileInfo(e.FullPath);
+                    double fileSizeMB = fileInfo.Length / (1024.0 * 1024.0);
+                    double maxFileSizeMB = maxFileSize / (1024.0 * 1024.0);
+
+                    if (fileInfo.Length > maxFileSize)
+                    {
+                        Console.WriteLine($"[FolderWatcher] Plik jest za duży: {fileSizeMB:F2} MB. Maksymalny rozmiar to {maxFileSizeMB:F2} MB.");
+                        MessageBox.Show($"Plik {e.FullPath} jest za duży ({fileSizeMB:F2} MB). Maksymalny rozmiar to {maxFileSizeMB:F2} MB.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
                     var fileContent = File.ReadAllBytes(e.FullPath);
                     await _clientService.UploadFileAsync(e.FullPath, fileContent);
                 }
@@ -41,6 +54,7 @@ namespace Client.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Błąd podczas przesyłania pliku {e.FullPath}: {ex.Message}");
+                MessageBox.Show($"Błąd podczas przesyłania pliku {e.FullPath}: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
