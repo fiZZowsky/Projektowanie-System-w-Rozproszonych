@@ -3,6 +3,7 @@ using Common.GRPC;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
+using System.Net.NetworkInformation;
 using static Common.GRPC.DistributedFileServer;
 
 namespace Client.Services
@@ -65,7 +66,7 @@ namespace Client.Services
             //}
         }
 
-        public async Task NotifyFileDeletedAsync(string fileName)
+        public async Task DeleteFileAsync(string fileName)
         {
             using var channel = GrpcChannel.ForAddress(_serverAddress);
             var client = new DistributedFileServerClient(channel);
@@ -83,6 +84,17 @@ namespace Client.Services
             {
                 Console.WriteLine($"[Client] Błąd podczas usuwania pliku {fileName}.");
             }
+        }
+
+        public static string GetComputerId()
+        {
+            var macAddress = NetworkInterface
+                .GetAllNetworkInterfaces()
+                .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .Select(nic => nic.GetPhysicalAddress().ToString())
+                .FirstOrDefault();
+
+            return macAddress ?? Guid.NewGuid().ToString();
         }
     }
 

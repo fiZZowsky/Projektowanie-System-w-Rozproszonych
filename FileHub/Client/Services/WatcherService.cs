@@ -40,13 +40,13 @@ namespace Client.Services
         private async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
-            await _clientService.NotifyFileDeletedAsync(e.FullPath);
+            await _clientService.DeleteFileAsync(e.FullPath);
         }
 
         private async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
-            await _clientService.NotifyFileDeletedAsync(e.OldFullPath);
+            await _clientService.DeleteFileAsync(e.OldFullPath);
 
             if (File.Exists(e.FullPath))
             {

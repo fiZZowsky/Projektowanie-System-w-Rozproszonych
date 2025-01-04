@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using Microsoft.Win32;
 using Client.Services;
 using System.IO;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace Client.Views
 {
@@ -24,9 +25,12 @@ namespace Client.Views
     public partial class DashboardView : UserControl
     {
         private WatcherService _folderWatcher;
+        private string computerdId;
+
         public DashboardView()
         {
             InitializeComponent();
+            loadMetadata();
         }
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
@@ -34,17 +38,15 @@ namespace Client.Views
         }
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            var dialog = new CommonOpenFileDialog
             {
-                Title = "Wybierz folder",
-                Filter = "Foldery|.",
-                CheckFileExists = false,
-                FileName = "Wybierz ten folder"
+                Title = "Wybierz folder do synchronizacji",
+                IsFolderPicker = true
             };
 
-            if (dialog.ShowDialog() == true)
+            if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
             {
-                string selectedPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+                string selectedPath = dialog.FileName;
                 FolderPathTextBox.Text = selectedPath;
             }
         }
@@ -54,6 +56,12 @@ namespace Client.Views
             {
                 var clientService = new ClientService("http://localhost:5000");
                 _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
+
+                MetadataHandler.SaveMetadata(new Metadata
+                {
+                    ComputerId = computerdId,
+                    SyncPath = FolderPathTextBox.Text
+                });
 
                 MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -65,6 +73,17 @@ namespace Client.Views
         private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void loadMetadata ()
+        {
+            computerdId = ClientService.GetComputerId();
+            var metadata = MetadataHandler.GetMetadataForComputer(computerdId);
+
+            if (metadata != null)
+            {
+                FolderPathTextBox.Text = metadata.SyncPath;
+            }
         }
     }
 }
