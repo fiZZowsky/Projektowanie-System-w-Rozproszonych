@@ -31,19 +31,5 @@ namespace Server.Utils
             // Jeśli żaden nie pasuje, wróć pierwszy węzeł (pierścień DHT)
             return nodes.First();
         }
-
-        public static List<DHTNode> GetReplicationNodes(DHTNode responsibleNode, List<DHTNode> nodes, int replicationFactor)
-        {
-            nodes = nodes.OrderBy(n => n.Hash).ToList();
-            var startIndex = nodes.IndexOf(responsibleNode);
-            var replicationNodes = new List<DHTNode>();
-
-            for (int i = 0; i < replicationFactor; i++)
-            {
-                replicationNodes.Add(nodes[(startIndex + i) % nodes.Count]); // Pierścień
-            }
-
-            return replicationNodes;
-        }
     }
 }

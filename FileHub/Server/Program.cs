@@ -41,7 +41,8 @@ class Program
         finally
         {
             multicastService.AnnounceShutdown(port);
-            dhtService.RemoveNode(port); // Usuń lokalny serwer z DHT
+            dhtService.RemoveNode(port, serverManager.GetStorageDirectoryPath()); // Usuń lokalny serwer z DHT
+
         }
     }
 }

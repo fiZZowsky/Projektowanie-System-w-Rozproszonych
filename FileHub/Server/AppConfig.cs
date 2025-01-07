@@ -19,9 +19,4 @@ public class AppConfig
             return dataStoragePath;
         }
     }
-
-    public static List<string> UserPaths = new List<string>
-    {
-        @"C:\Users\Piotrek\Desktop\Do synchronizacji"
-    };
 }

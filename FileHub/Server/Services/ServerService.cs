@@ -17,7 +17,7 @@ namespace Server.Services
         {
             _path = filesDirectoryPath;
             _dhtService = dhtService;
-            _filesService = new FilesService(filesDirectoryPath, _dhtService);
+            _filesService = new FilesService(filesDirectoryPath);
         }
         
         public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)

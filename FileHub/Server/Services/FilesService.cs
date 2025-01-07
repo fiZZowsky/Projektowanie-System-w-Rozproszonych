@@ -1,6 +1,5 @@
 ﻿using Common.GRPC;
 using Common.Converters;
-using Server.Utils;
 using Grpc.Net.Client;
 
 namespace Server.Services;
@@ -8,12 +7,10 @@ namespace Server.Services;
 public class FilesService
 {
     private readonly string _path;
-    private readonly DHTService _dhtService;
 
-    public FilesService(string filesDirectoryPath, DHTService dhtService)
+    public FilesService(string filesDirectoryPath)
     {
         _path = filesDirectoryPath;
-        _dhtService = dhtService;
     }
 
     public async Task<UploadResponse> SaveFile(UploadRequest request)
