@@ -1,6 +1,5 @@
 ﻿using Common;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Commm.Converters;
 
@@ -10,7 +9,7 @@ public static class PasswordEncryptor
     {
         using (var aes = Aes.Create())
         {
-            aes.Key = Encoding.UTF8.GetBytes(AppSettings.EncryptionKey);
+            aes.Key = Convert.FromBase64String(AppSettings.EncryptionKey);
             aes.IV = aes.Key.Take(16).ToArray();
 
             using (var encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
