@@ -12,6 +12,8 @@ service DistributedFileServer {
     rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
     rpc DeleteFile (DeleteRequest) returns (DeleteResponse);
     rpc TransferFile (TransferRequest) returns (TransferResponse);
+    rpc RegisterNewUser (UserDataRequest) returns (UserDataResponse);
+    rpc LoginUser (UserDataRequest) returns (UserDataResponse);
 }
 
 message UploadRequest {
@@ -45,7 +47,7 @@ message TransferRequest {
 
 message UserDataRequest {
     string username = 1;
-    string password = 2;
+    string passwordHash = 2;
 }
 
 message FileData {

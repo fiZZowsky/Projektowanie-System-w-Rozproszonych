@@ -28,58 +28,61 @@ namespace Client.Services
 
         private async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            try
+            const int maxFileSize = 4 * 1024 * 1024; // 4 MB
+
+            if (File.Exists(e.FullPath))
             {
-                Console.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
+                var fileInfo = new FileInfo(e.FullPath);
+                double fileSizeMB = fileInfo.Length / (1024.0 * 1024.0);
+                double maxFileSizeMB = maxFileSize / (1024.0 * 1024.0);
 
-                const int maxFileSize = 4 * 1024 * 1024; // 4 MB
-
-                if (File.Exists(e.FullPath))
+                if (fileInfo.Length > maxFileSize)
                 {
-                    var fileInfo = new FileInfo(e.FullPath);
-                    double fileSizeMB = fileInfo.Length / (1024.0 * 1024.0);
-                    double maxFileSizeMB = maxFileSize / (1024.0 * 1024.0);
-
-                    if (fileInfo.Length > maxFileSize)
-                    {
-                        Console.WriteLine($"[FolderWatcher] Plik jest za duży: {fileSizeMB:F2} MB. Maksymalny rozmiar to {maxFileSizeMB:F2} MB.");
-                        MessageBox.Show($"Plik {e.FullPath} jest za duży ({fileSizeMB:F2} MB). Maksymalny rozmiar to {maxFileSizeMB:F2} MB.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-
-                    var fileContent = File.ReadAllBytes(e.FullPath);
-                    await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                    Console.WriteLine($"[FolderWatcher] Plik jest za duży: {fileSizeMB:F2} MB. Maksymalny rozmiar to {maxFileSizeMB:F2} MB.");
+                    MessageBox.Show($"Plik {e.FullPath} jest za duży ({fileSizeMB:F2} MB). Maksymalny rozmiar to {maxFileSizeMB:F2} MB.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd podczas przesyłania pliku {e.FullPath}: {ex.Message}");
-                MessageBox.Show($"Błąd podczas przesyłania pliku {e.FullPath}: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                var fileContent = File.ReadAllBytes(e.FullPath);
+                var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                if (!response.Success)
+                {
+                    MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            try
+            var response = await _clientService.NotifyFileDeletedAsync(e.FullPath);
+            if (!response.Success)
             {
-                Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
-                await _clientService.NotifyFileDeletedAsync(e.FullPath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd podczas usuwania pliku {e.FullPath}: {ex.Message}");
+                MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
-            await _clientService.NotifyFileDeletedAsync(e.OldFullPath);
 
-            if (File.Exists(e.FullPath))
+            var deleteResponse = await _clientService.NotifyFileDeletedAsync(e.OldFullPath);
+            if(deleteResponse.Success)
             {
-                var fileContent = File.ReadAllBytes(e.FullPath);
-                await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                if (File.Exists(e.FullPath))
+                {
+                    var fileContent = File.ReadAllBytes(e.FullPath);
+                    var uploadResponse = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                    if (!uploadResponse.Success)
+                    {
+                        MessageBox.Show(uploadResponse.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show(deleteResponse.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

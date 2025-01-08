@@ -1,4 +1,5 @@
-﻿using Client.Utils;
+﻿using Client.Services;
+using Client.Utils;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,17 +14,18 @@ namespace Client.Views
         {
             InitializeComponent();
         }
-        private void LoginButton_Click(object sender, RoutedEventArgs e)
+        private async Task LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            if (UsernameTextBox.Text == "admin" && PasswordBox.Password == "root123")
+            var clientService = new ClientService("http://localhost:5000");
+            var response = await clientService.LoginUserAsync(UsernameTextBox.Text, PasswordBox.Password);
+
+            if (response.Success)
             {
-                Session.UserId = "admin";
-                Session.Username = "admin";
                 ((MainWindow)Application.Current.MainWindow).ChangeView(new DashboardView());
             }
             else
             {
-                MessageBox.Show("Nieprawidłowe dane logowania.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         private void RegisterButton_Click(object sender, RoutedEventArgs e)

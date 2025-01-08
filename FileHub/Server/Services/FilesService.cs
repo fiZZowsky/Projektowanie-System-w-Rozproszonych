@@ -7,10 +7,12 @@ namespace Server.Services;
 public class FilesService
 {
     private readonly string _path;
+    private readonly DHTService _dhtService;
 
-    public FilesService(string filesDirectoryPath)
+    public FilesService(string filesDirectoryPath, DHTService dhtService)
     {
         _path = filesDirectoryPath;
+        _dhtService = dhtService;
     }
 
     public async Task<UploadResponse> SaveFile(UploadRequest request)
@@ -38,31 +40,45 @@ public class FilesService
     public async Task<DownloadResponse> GetUserFiles(DownloadRequest request)
     {
         var response = new DownloadResponse();
-        var userFiles = new List<FileInfo>();
+        var userFiles = new List<FileData>();
 
-        var files = Directory.GetFiles(_path)
-                                     .Where(file => file.Contains(request.UserId))
-                                     .ToList();
+        var localFiles = Directory.GetFiles(_path)
+                               .Where(file => file.Contains(request.UserId))
+                               .ToList();
 
-        if (files.Any())
+        foreach (var filePath in localFiles)
         {
-            foreach (var filePath in files)
-            {
-                var fileInfo = new FileInfo(filePath);
-                userFiles.Add(fileInfo);
-            }
+            var fileInfo = new FileInfo(filePath);
+            var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
+            userFiles.Add(fileData);
+        }
 
+        var nodes = _dhtService.GetNodes();
+
+        foreach (var node in nodes)
+        {
+            if(node.Address == "localhost" && node.Port == 5000) continue; //Pomijanie aktualnego węzła
+
+            // Pobierz pliki od innego serwera
+            var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
+            var client = new DistributedFileServer.DistributedFileServerClient(channel);
+
+            var remoteResponse = await client.DownloadFileAsync(request);
+            if (remoteResponse.Success)
+            {
+                userFiles.AddRange(remoteResponse.Files);
+            }
+        }
+
+        userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
+        if (userFiles.Any())
+        {
             response.Success = true;
-            foreach (var fileInfo in userFiles)
-            {
-                var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
-
-                response.Files.Add(fileData);
-            }
+            response.Files.AddRange(userFiles);
         }
         else
         {
-            response.Success = true;
+            response.Success = false;
             response.Message = "No files found for this user.";
         }
 

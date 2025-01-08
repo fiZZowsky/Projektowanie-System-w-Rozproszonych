@@ -17,7 +17,7 @@ namespace Server.Services
         {
             _path = filesDirectoryPath;
             _dhtService = dhtService;
-            _filesService = new FilesService(filesDirectoryPath);
+            _filesService = new FilesService(filesDirectoryPath.Normalize, _dhtService);
         }
         
         public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)
@@ -154,6 +154,30 @@ namespace Server.Services
             catch (Exception ex)
             {
                 return new TransferResponse { Success = false, Message = $"Error transferring file: {ex.Message}" };
+            }
+        }
+
+        public override async Task<UserDataResponse> RegisterNewUser(UserDataRequest request, ServerCallContext context)
+        {
+            try
+            {
+                return new UserDataResponse { Success = true, Message = "User registered successfully", UserId = "jakies_id", Username = "jakas_nazwa" };
+            }
+            catch (Exception ex)
+            {
+                return new UserDataResponse { Success = false, Message = $"Error registering new user: {ex.Message}" };
+            }
+        }
+
+        public override async Task<UserDataResponse> LoginUser(UserDataRequest request, ServerCallContext context)
+        {
+            try
+            {
+                return new UserDataResponse { Success = true, Message = "User logged in successfully", UserId = "jakies_id", Username = "jakas_nazwa" };
+            }
+            catch (Exception ex)
+            {
+                return new UserDataResponse { Success = false, Message = $"Error logging user: {ex.Message}" };
             }
         }
     }

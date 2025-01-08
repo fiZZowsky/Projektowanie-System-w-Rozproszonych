@@ -33,46 +33,31 @@ namespace Client.Services
             return availableServers[serverIndex];
         }
 
-        public async Task UploadFileAsync(string fileName, byte[] fileContent)
+        public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
         {
-            try
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(fileName, availableServers);
+
+            using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
+            var client = new DistributedFileServerClient(channel);
+
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            string fileExtension = Path.GetExtension(fileName).Replace(".", "");
+            Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
+
+            var response = await client.UploadFileAsync(new Common.GRPC.UploadRequest
             {
-                var availableServers = await GetAvailableServersAsync();
-                var responsibleServer = FindResponsibleServer(fileName, availableServers);
+                FileName = fileNameWithoutExtension,
+                FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
+                FileType = fileExtension,
+                CreationDate = creationDate,
+                UserId = Session.UserId
+            });
 
-                using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
-                var client = new DistributedFileServerClient(channel);
-
-                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-                string fileExtension = Path.GetExtension(fileName).Replace(".", "");
-                Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
-
-                var response = await client.UploadFileAsync(new Common.GRPC.UploadRequest
-                {
-                    FileName = fileNameWithoutExtension,
-                    FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
-                    FileType = fileExtension,
-                    CreationDate = creationDate,
-                    UserId = Session.UserId
-                });
-
-                if (response.Success)
-                {
-                    Console.WriteLine($"Plik {fileName} przesłany na serwer {responsibleServer.Address}:{responsibleServer.Port}");
-                }
-                else
-                {
-                    Console.WriteLine($"Błąd podczas przesyłania pliku {fileName}.");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
-            
+            return response;
         }
 
-        public async Task DownloadFileAsync(string userId)
+        public async Task<Common.GRPC.DownloadResponse> DownloadFileAsync(string userId)
         {
             using var channel = GrpcChannel.ForAddress(_serverAddress);
             var client = new DistributedFileServerClient(channel);
@@ -82,19 +67,10 @@ namespace Client.Services
                 UserId = userId
             });
 
-            //if (response.Success)
-            //{
-            //    string fileName = $"{response.FileName}.{response.FileType}";
-            //    File.WriteAllBytes(fileName, response.FileContent.ToByteArray());
-            //    Console.WriteLine($"Plik {fileName} pobrany.");
-            //}
-            //else
-            //{
-            //    Console.WriteLine($"Błąd podczas pobierania plików dla użytkownika {userId}: {response.Message}");
-            //}
+            return response;
         }
 
-        public async Task NotifyFileDeletedAsync(string fileName)
+        public async Task<Common.GRPC.DeleteResponse> NotifyFileDeletedAsync(string fileName)
         {
             using var channel = GrpcChannel.ForAddress(_serverAddress);
             var client = new DistributedFileServerClient(channel);
@@ -104,32 +80,41 @@ namespace Client.Services
                 FileName = fileName
             });
 
-            if (response.Success)
-            {
-                Console.WriteLine($"[Client] Plik {fileName} został usunięty na serwerze.");
-            }
-            else
-            {
-                Console.WriteLine($"[Client] Błąd podczas usuwania pliku {fileName}.");
-            }
+            return response;
         }
 
-        //public async Task RegisterUserAsync(string username, string password)
-        //{
-        //    using (Aes aes = Aes.Create())
-        //    {
-        //        aes.Key = Encoding.UTF8.GetBytes(key);
-        //        aes.IV = new byte[16];
+        public async Task<Common.GRPC.UserDataResponse> RegisterUserAsync(string username, string password)
+        {
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(username, availableServers);
 
-        //        using (MemoryStream memoryStream = new MemoryStream())
-        //        using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateEncryptor(), CryptoStreamMode.Write))
-        //        {
-        //            byte[] plainBytes = Encoding.UTF8.GetBytes(password);
-        //            cryptoStream.Write(plainBytes, 0, plainBytes.Length);
-        //            cryptoStream.FlushFinalBlock();
-        //            var encryptedPassword = Convert.ToBase64String(memoryStream.ToArray());
-        //        }
-        //    }
-        //}
+            AccountService _accountService = new AccountService();
+            var userResponse = await _accountService.CreateNewUserAsync(username, password, responsibleServer);
+
+            if (userResponse.Success)
+            {
+                Session.UserId = userResponse.UserId;
+                Session.Username = userResponse.Username;
+            }
+
+            return userResponse;
+        }
+
+        public async Task<Common.GRPC.UserDataResponse> LoginUserAsync(string username, string password)
+        {
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(username, availableServers);
+
+            AccountService _accountService = new AccountService();
+            var userResponse = await _accountService.LoginUserAsync(username, password, responsibleServer);
+
+            if (userResponse.Success)
+            {
+                Session.UserId = userResponse.UserId;
+                Session.Username = userResponse.Username;
+            }
+
+            return userResponse;
+        }
     }
 }
