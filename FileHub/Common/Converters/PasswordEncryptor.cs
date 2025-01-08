@@ -1,9 +1,8 @@
 ﻿using Common;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Client.Utils;
+namespace Commm.Converters;
 
 public static class PasswordEncryptor
 {

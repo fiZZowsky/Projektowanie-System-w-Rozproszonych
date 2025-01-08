@@ -3,6 +3,7 @@ using Common.GRPC;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Server.Models;
 using Server.Utils;
 
 namespace Server.Services
@@ -12,14 +13,16 @@ namespace Server.Services
         private readonly string _path;
         private readonly DHTService _dhtService;
         private FilesService _filesService;
+        private readonly UserService _userService;
 
         public ServerService(string filesDirectoryPath, DHTService dhtService)
         {
             _path = filesDirectoryPath;
             _dhtService = dhtService;
-            _filesService = new FilesService(filesDirectoryPath.Normalize, _dhtService);
+            _filesService = new FilesService(filesDirectoryPath, _dhtService);
+            _userService = new UserService(AppConfig.DefaultUserDataStoragePath);
         }
-        
+
         public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)
         {
             var nodes = _dhtService.GetNodes();
@@ -161,7 +164,23 @@ namespace Server.Services
         {
             try
             {
-                return new UserDataResponse { Success = true, Message = "User registered successfully", UserId = "jakies_id", Username = "jakas_nazwa" };
+                var users = await _userService.GetUsers();
+                if (users.Any(u => u.Username == request.Username))
+                {
+                    return new UserDataResponse { Success = false, Message = "Username already exists." };
+                }
+                var newUser = new UserModel { Id = users.Count() + 1, Username = request.Username, Password = request.PasswordHash };
+                users.Add(newUser);
+                var IsSuccessed = await _userService.AddNewUser(users);
+
+                if(IsSuccessed)
+                {
+                    return new UserDataResponse { Success = true, Message = "User registered successfully", UserId = newUser.Id.ToString(), Username = newUser.Username };
+                }
+                else
+                {
+                    return new UserDataResponse { Success = false, Message = "Error registering new user" };
+                }
             }
             catch (Exception ex)
             {
@@ -173,11 +192,25 @@ namespace Server.Services
         {
             try
             {
-                return new UserDataResponse { Success = true, Message = "User logged in successfully", UserId = "jakies_id", Username = "jakas_nazwa" };
+                var users = await _userService.GetUsers();
+                var user = users.FirstOrDefault(u => u.Username == request.Username && u.Password == request.PasswordHash);
+
+                if (user != null)
+                {
+                    return new UserDataResponse
+                    {
+                        Success = true,
+                        Message = "User logged in successfully",
+                        UserId = user.Id.ToString(),
+                        Username = user.Username
+                    };
+                }
+
+                return new UserDataResponse { Success = false, Message = "Incorrect user data" };
             }
             catch (Exception ex)
             {
-                return new UserDataResponse { Success = false, Message = $"Error logging user: {ex.Message}" };
+                return new UserDataResponse { Success = false, Message = $"User login error: {ex.Message}" };
             }
         }
     }
