@@ -36,7 +36,8 @@ public class UserService
                 {
                     try
                     {
-                        using (FileStream fs = new FileStream(_storagePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                        // Spróbuj otworzyć plik z możliwością współdzielenia
+                        using (FileStream fs = new FileStream(_storagePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
                         {
                             isFileLocked = false;
                         }
@@ -53,8 +54,11 @@ public class UserService
                 }
             }
 
-            // Ustawienie pliku jako tylko do odczytu
-            fileInfo.IsReadOnly = true;
+            // Jeśli plik jest ustawiony na tylko do odczytu, zmień go na odczyt/zapis
+            if (fileInfo.IsReadOnly)
+            {
+                fileInfo.IsReadOnly = false;
+            }
 
             var serializedList = JsonConvert.SerializeObject(users, Formatting.Indented);
             await File.WriteAllTextAsync(_storagePath, serializedList);
@@ -62,10 +66,12 @@ public class UserService
         }
         catch (Exception ex)
         {
+            // Loguj błąd lub dodaj szczegóły w przypadku wyjątku
             return false;
         }
         finally
         {
+            // Po zakończeniu operacji, upewnij się, że plik ma odpowiedni atrybut
             if (fileInfo.Exists)
             {
                 fileInfo.IsReadOnly = false;

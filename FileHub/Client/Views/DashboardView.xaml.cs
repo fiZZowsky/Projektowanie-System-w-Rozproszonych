@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using Client.Services;
 using System.IO;
+using Client.Utils;
 
 namespace Client.Views
 {
@@ -12,14 +13,24 @@ namespace Client.Views
     public partial class DashboardView : UserControl
     {
         private WatcherService _folderWatcher;
+        private ClientService _clientService;
+
         public DashboardView()
         {
             InitializeComponent();
+
+            this.DataContext = Session.Instance;
+
+            _clientService = new ClientService("http://localhost:5000");
         }
+
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
+            _clientService.LogoutUser();
             ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+            MessageBox.Show("Pomyślnie wylogowano użytkownika", "Wylogowano", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog
@@ -36,14 +47,14 @@ namespace Client.Views
                 FolderPathTextBox.Text = selectedPath;
             }
         }
+
         private async void SyncFilesButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
                 {
-                    var clientService = new ClientService("http://localhost:5000");
-                    _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
+                    _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
 
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
                 }

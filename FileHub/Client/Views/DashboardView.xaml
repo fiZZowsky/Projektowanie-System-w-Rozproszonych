@@ -14,7 +14,7 @@
         <Border Grid.Row="0" Background="#4CAF50" Padding="10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <!-- <Image Source="pack://application:,,,/Assets/user-icon.png" Width="30" Height="30" Margin="0,0,10,0" /> -->
-                <TextBlock Text="Zalogowano jako: Admin" FontSize="14" Foreground="White" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Path=Username, StringFormat='Zalogowano jako: {0}'}" FontSize="14" Foreground="White" VerticalAlignment="Center" />
                 <Button Content="Wyloguj" Background="White" Foreground="#4CAF50" Width="80" Height="30" Margin="10,0,0,0"
                         Click="LogoutButton_Click" />
             </StackPanel>

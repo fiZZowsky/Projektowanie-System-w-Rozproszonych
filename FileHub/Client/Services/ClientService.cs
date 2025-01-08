@@ -116,5 +116,10 @@ namespace Client.Services
 
             return userResponse;
         }
+
+        public void LogoutUser()
+        {
+            Session.ClearSession();
+        }
     }
 }

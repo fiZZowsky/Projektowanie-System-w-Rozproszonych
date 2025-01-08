@@ -13,7 +13,7 @@ namespace Client.Views
         {
             InitializeComponent();
         }
-        private async Task RegisterButton_Click(object sender, RoutedEventArgs e)
+        private async void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
             if (PasswordBox.Password != ConfirmPasswordBox.Password)
             {
