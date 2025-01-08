@@ -11,7 +11,7 @@ namespace Server.Seeders
             var usersList = new List<UserModel>();
             var user = new UserModel
             {
-                Id = Guid.NewGuid(),
+                Id = 1,
                 Username = "admin",
                 Password = PasswordEncryptor.EncryptPassword("root123")
             };
