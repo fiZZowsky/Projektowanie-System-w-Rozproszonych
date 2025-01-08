@@ -1,21 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Microsoft.Win32;
 using Client.Services;
 using System.IO;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using Client.Utils;
 
 namespace Client.Views
 {
@@ -26,16 +14,25 @@ namespace Client.Views
     {
         private WatcherService _folderWatcher;
         private string computerdId;
+        private ClientService _clientService;
 
         public DashboardView()
         {
             InitializeComponent();
             loadMetadata();
+
+            this.DataContext = Session.Instance;
+
+            _clientService = new ClientService("http://localhost:5000");
         }
+
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
+            _clientService.LogoutUser();
             ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+            MessageBox.Show("Pomyślnie wylogowano użytkownika", "Wylogowano", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new CommonOpenFileDialog
@@ -50,12 +47,14 @@ namespace Client.Views
                 FolderPathTextBox.Text = selectedPath;
             }
         }
+
         private async void SyncFilesButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
+            try
             {
-                var clientService = new ClientService("http://localhost:5000");
-                _folderWatcher = new WatcherService(FolderPathTextBox.Text, clientService);
+                if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
+                {
+                    _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
 
                 MetadataHandler.SaveMetadata(new Metadata
                 {
@@ -63,13 +62,19 @@ namespace Client.Views
                     SyncPath = FolderPathTextBox.Text
                 });
 
-                MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Wybierz poprawny folder przed synchronizacją.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Wybierz poprawny folder przed synchronizacją.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Błąd podczas synchronizacji plików: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);

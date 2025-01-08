@@ -1,5 +1,9 @@
-﻿using Common.GRPC;
+﻿using Common.Converters;
+using Common.GRPC;
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Server.Models;
 using Server.Utils;
 
 namespace Server.Services
@@ -9,12 +13,20 @@ namespace Server.Services
         private readonly string _path;
         private readonly DHTService _dhtService;
         private FilesService _filesService;
+        private readonly UserService _userService;
 
         public ServerService(string filesDirectoryPath, DHTService dhtService)
         {
             _path = filesDirectoryPath;
             _dhtService = dhtService;
             _filesService = new FilesService(filesDirectoryPath, _dhtService);
+            _userService = new UserService(AppConfig.DefaultUserDataStoragePath);
+        }
+
+        public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)
+        {
+            var nodes = _dhtService.GetNodes();
+            return ModelConverter.FromDHTNodes(nodes);
         }
 
         public override async Task<UploadResponse> UploadFile(UploadRequest request, ServerCallContext context)
@@ -26,7 +38,7 @@ namespace Server.Services
                 var availableNodes = _dhtService.GetNodes();
                 var node = DHTManager.FindResponsibleNode(request.FileName, availableNodes);
 
-                if (node.Port != AppConfig.MulticastPort) // Jeśli inny serwer odpowiada za plik
+                if (node.Port != _dhtService.GetServerPort()) // Jeśli inny serwer odpowiada za plik
                 {
                     Console.WriteLine($"[Redirect] Forwarding upload to server at {node.Address}:{node.Port}");
                     bool success = await _filesService.SendFileToServer(request, node.Address, node.Port);
@@ -46,6 +58,7 @@ namespace Server.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Błąd podczas przesyłania pliku: {ex.Message}");
                 return new UploadResponse
                 {
                     Success = false,
@@ -72,6 +85,51 @@ namespace Server.Services
                 };
             }
         }
+
+        public override async Task<DownloadByServerResponse> DownloadFileByServer(DownloadByServerRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var filePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName + "\\Server\\DataStorage\\", request.FileName);
+                if (File.Exists(filePath))
+                {
+                    var fileContent = await File.ReadAllBytesAsync(filePath);
+                    var fileData = new FileData
+                    {
+                        FileName = request.FileName,
+                        FileContent = ByteString.CopyFrom(fileContent),
+                        FileType = "application/octet-stream", // Zmień w zależności od typu pliku
+                        CreationDate = Timestamp.FromDateTime(File.GetCreationTime(filePath).ToUniversalTime())
+                    };
+
+                    return new DownloadByServerResponse
+                    {
+                        Success = true,
+                        Message = "File successfully retrieved.",
+                        Files = { fileData }
+                    };
+                }
+                else
+                {
+                    return new DownloadByServerResponse
+                    {
+                        Success = false,
+                        Message = "File not found.",
+                        Files = { }
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new DownloadByServerResponse
+                {
+                    Success = false,
+                    Message = $"Error downloading file: {ex.Message}",
+                    Files = { }
+                };
+            }
+        }
+
         public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
         {
             string filePath = Path.Combine(_path, request.FileName);
@@ -88,5 +146,72 @@ namespace Server.Services
             }
         }
 
+        public override async Task<TransferResponse> TransferFile(TransferRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var filePath = Path.Combine("_path", request.FileName);
+                await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
+                return new TransferResponse { Success = true, Message = "File transferred successfully." };
+            }
+            catch (Exception ex)
+            {
+                return new TransferResponse { Success = false, Message = $"Error transferring file: {ex.Message}" };
+            }
+        }
+
+        public override async Task<UserDataResponse> RegisterNewUser(UserDataRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var users = await _userService.GetUsers();
+                if (users.Any(u => u.Username == request.Username))
+                {
+                    return new UserDataResponse { Success = false, Message = "Username already exists." };
+                }
+                var newUser = new UserModel { Id = users.Count() + 1, Username = request.Username, Password = request.PasswordHash };
+                users.Add(newUser);
+                var IsSuccessed = await _userService.AddNewUser(users);
+
+                if(IsSuccessed)
+                {
+                    return new UserDataResponse { Success = true, Message = "User registered successfully", UserId = newUser.Id.ToString(), Username = newUser.Username };
+                }
+                else
+                {
+                    return new UserDataResponse { Success = false, Message = "Error registering new user" };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new UserDataResponse { Success = false, Message = $"Error registering new user: {ex.Message}" };
+            }
+        }
+
+        public override async Task<UserDataResponse> LoginUser(UserDataRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var users = await _userService.GetUsers();
+                var user = users.FirstOrDefault(u => u.Username == request.Username && u.Password == request.PasswordHash);
+
+                if (user != null)
+                {
+                    return new UserDataResponse
+                    {
+                        Success = true,
+                        Message = "User logged in successfully",
+                        UserId = user.Id.ToString(),
+                        Username = user.Username
+                    };
+                }
+
+                return new UserDataResponse { Success = false, Message = "Incorrect user data" };
+            }
+            catch (Exception ex)
+            {
+                return new UserDataResponse { Success = false, Message = $"User login error: {ex.Message}" };
+            }
+        }
     }
 }

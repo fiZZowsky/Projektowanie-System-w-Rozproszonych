@@ -1,17 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Client.Services;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Client.Views
 {
@@ -24,7 +13,7 @@ namespace Client.Views
         {
             InitializeComponent();
         }
-        private void RegisterButton_Click(object sender, RoutedEventArgs e)
+        private async void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
             if (PasswordBox.Password != ConfirmPasswordBox.Password)
             {
@@ -32,9 +21,19 @@ namespace Client.Views
                 return;
             }
 
-            MessageBox.Show("Rejestracja zakończona sukcesem!", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+            var clientService = new ClientService("http://localhost:5000");
+            var response = await clientService.RegisterUserAsync(UsernameTextBox.Text, PasswordBox.Password);
 
-            ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+            if (response.Success)
+            {
+                MessageBox.Show("Rejestracja zakończona sukcesem!", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+            }
+            else
+            {
+                MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void GoBackButton_Click(object sender, RoutedEventArgs e)

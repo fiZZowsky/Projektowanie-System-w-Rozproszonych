@@ -3,11 +3,17 @@
 package Common.gRPC;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 service DistributedFileServer {
+    rpc GetNodes (google.protobuf.Empty) returns (NodeListResponse);
     rpc UploadFile (UploadRequest) returns (UploadResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
+    rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
     rpc DeleteFile (DeleteRequest) returns (DeleteResponse);
+    rpc TransferFile (TransferRequest) returns (TransferResponse);
+    rpc RegisterNewUser (UserDataRequest) returns (UserDataResponse);
+    rpc LoginUser (UserDataRequest) returns (UserDataResponse);
 }
 
 message UploadRequest {
@@ -27,15 +33,47 @@ message DownloadRequest {
     string userId = 1;
 }
 
+message DownloadByServerRequest {
+    string fileName = 1;
+}
+
+message TransferRequest {
+    string fileName = 1;
+    bytes fileContent = 2;
+    string fileType = 3;
+    google.protobuf.Timestamp creationDate = 4;
+    string userId = 5;
+}
+
+message UserDataRequest {
+    string username = 1;
+    string passwordHash = 2;
+}
+
 message FileData {
     string fileName = 1;
     bytes fileContent = 2;
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
-    string serverAddress = 5;
+    string userId = 5;
+}
+
+message NodeListResponse {
+    repeated NodeInfo nodes = 1;
+}
+
+message NodeInfo {
+    string address = 1;
+    int32 port = 2;
 }
 
 message DownloadResponse {
+    bool success = 1;
+    string message = 2;
+    repeated FileData files = 3;
+}
+
+message DownloadByServerResponse {
     bool success = 1;
     string message = 2;
     repeated FileData files = 3;
@@ -48,4 +86,16 @@ message DeleteRequest {
 message DeleteResponse {
     bool success = 1;
     string message = 2;
+}
+
+message TransferResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message UserDataResponse {
+    string userId = 1;
+    string username = 2;
+    bool success = 3;
+    string message = 4;
 }

@@ -1,6 +1,5 @@
 ﻿using Common.GRPC;
 using Common.Converters;
-using Server.Utils;
 using Grpc.Net.Client;
 
 namespace Server.Services;
@@ -18,21 +17,6 @@ public class FilesService
 
     public async Task<UploadResponse> SaveFile(UploadRequest request)
     {
-        var availableNodes = _dhtService.GetNodes();
-        var node = DHTManager.FindResponsibleNode(request.FileName, availableNodes);
-        if(node.Port != AppConfig.MulticastPort)
-        {
-            bool success = await SendFileToServer(request, node.Address, node.Port);
-            if (success)
-            {
-                return new UploadResponse { Success = true, Message = "File uploaded to the responsible server." };
-            }
-            else
-            {
-                return new UploadResponse { Success = false, Message = "Failed to upload file to responsible server." };
-            }
-        }
-
         string creationDate = FormatConverter.SanitizeFileName(DateTimeConverter.ConvertToDateTime(request.CreationDate).ToString("yyyyMMdd-HHmmss"));
         var fileName = $"{request.FileName}_{request.FileType}_{request.UserId}_{creationDate}_{Guid.NewGuid()}";
         var filePath = Path.Combine(_path, fileName);
@@ -56,31 +40,45 @@ public class FilesService
     public async Task<DownloadResponse> GetUserFiles(DownloadRequest request)
     {
         var response = new DownloadResponse();
-        var userFiles = new List<FileInfo>();
+        var userFiles = new List<FileData>();
 
-        var files = Directory.GetFiles(_path)
-                                     .Where(file => file.Contains(request.UserId))
-                                     .ToList();
+        var localFiles = Directory.GetFiles(_path)
+                               .Where(file => file.Contains(request.UserId))
+                               .ToList();
 
-        if (files.Any())
+        foreach (var filePath in localFiles)
         {
-            foreach (var filePath in files)
-            {
-                var fileInfo = new FileInfo(filePath);
-                userFiles.Add(fileInfo);
-            }
+            var fileInfo = new FileInfo(filePath);
+            var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
+            userFiles.Add(fileData);
+        }
 
+        var nodes = _dhtService.GetNodes();
+
+        foreach (var node in nodes)
+        {
+            if(node.Address == "localhost" && node.Port == _dhtService.GetServerPort()) continue; //Pomijanie aktualnego węzła
+
+            // Pobierz pliki od innego serwera
+            var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
+            var client = new DistributedFileServer.DistributedFileServerClient(channel);
+
+            var remoteResponse = await client.DownloadFileAsync(request);
+            if (remoteResponse.Success)
+            {
+                userFiles.AddRange(remoteResponse.Files);
+            }
+        }
+
+        userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
+        if (userFiles.Any())
+        {
             response.Success = true;
-            foreach (var fileInfo in userFiles)
-            {
-                var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
-
-                response.Files.Add(fileData);
-            }
+            response.Files.AddRange(userFiles);
         }
         else
         {
-            response.Success = true;
+            response.Success = false;
             response.Message = "No files found for this user.";
         }
 

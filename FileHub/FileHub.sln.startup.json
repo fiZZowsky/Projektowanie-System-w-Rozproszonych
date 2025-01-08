@@ -1,0 +1,51 @@
+{
+    /*  Configuration File Version  */
+    "Version": 3,
+    
+    "ListAllProjects": true,
+
+  "MultiProjectConfigurations": {
+    "Client + Server": {
+      "Projects": {
+        "Client": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        },
+        "Server": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        }
+      },
+      "SolutionConfiguration": "Debug",
+      "SolutionPlatform": "Any CPU"
+    },
+    "Client + 3 Servers": {
+      "Projects": {
+        "Client": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        },
+        "Server1": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        },
+        "Server2": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        },
+        "Server3": {
+          "CommandLineArguments": "",
+          "WorkingDirectory": "",
+          "StartProject": true
+        }
+      },
+      "SolutionConfiguration": "Debug",
+      "SolutionPlatform": "Any CPU"
+    }
+  }
+}

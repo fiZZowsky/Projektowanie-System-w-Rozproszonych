@@ -49,4 +49,9 @@ public class ServerManager
         server.ShutdownAsync().Wait();
         Console.WriteLine("[Server] Shutdown completed.");
     }
+
+    public string GetStorageDirectoryPath()
+    {
+        return _storageDirectory;
+    }
 }

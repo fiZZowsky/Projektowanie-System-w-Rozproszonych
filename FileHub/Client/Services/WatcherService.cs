@@ -1,5 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.Windows;
 
 namespace Client.Services
 {
@@ -28,12 +28,28 @@ namespace Client.Services
 
         private async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
+            const int maxFileSize = 4 * 1024 * 1024; // 4 MB
 
             if (File.Exists(e.FullPath))
             {
+                var fileInfo = new FileInfo(e.FullPath);
+                double fileSizeMB = fileInfo.Length / (1024.0 * 1024.0);
+                double maxFileSizeMB = maxFileSize / (1024.0 * 1024.0);
+
+                if (fileInfo.Length > maxFileSize)
+                {
+                    Console.WriteLine($"[FolderWatcher] Plik jest za duży: {fileSizeMB:F2} MB. Maksymalny rozmiar to {maxFileSizeMB:F2} MB.");
+                    MessageBox.Show($"Plik {e.FullPath} jest za duży ({fileSizeMB:F2} MB). Maksymalny rozmiar to {maxFileSizeMB:F2} MB.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
                 var fileContent = File.ReadAllBytes(e.FullPath);
-                await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                if (!response.Success)
+                {
+                    MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -41,6 +57,11 @@ namespace Client.Services
         {
             Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
             await _clientService.DeleteFileAsync(e.FullPath);
+            var response = await _clientService.DeleteFileAsync(e.FullPath);
+            if (!response.Success)
+            {
+                MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async void OnFileRenamed(object sender, RenamedEventArgs e)
@@ -48,10 +69,23 @@ namespace Client.Services
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
             await _clientService.DeleteFileAsync(e.OldFullPath);
 
-            if (File.Exists(e.FullPath))
+            var deleteResponse = await _clientService.DeleteFileAsync(e.OldFullPath);
+            if(deleteResponse.Success)
             {
-                var fileContent = File.ReadAllBytes(e.FullPath);
-                await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                if (File.Exists(e.FullPath))
+                {
+                    var fileContent = File.ReadAllBytes(e.FullPath);
+                    var uploadResponse = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                    if (!uploadResponse.Success)
+                    {
+                        MessageBox.Show(uploadResponse.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show(deleteResponse.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
