@@ -6,7 +6,11 @@ namespace Server.Services;
 public class UserService
 {
     private readonly string _storagePath;
-    private static readonly TimeSpan FileLockTimeout = TimeSpan.FromSeconds(300); // Timeout na 5 minut dla zablokowanego pliku
+    private static readonly TimeSpan FileLockTimeout = TimeSpan.FromSeconds(AppConfig.FileLockTimeout);
+    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(AppConfig.InactivityCheckTime);
+    private static readonly object ActiveUsersLock = new object();
+    private static Dictionary<string, DateTime> ActiveUsers = new Dictionary<string, DateTime>();
+    private static readonly SemaphoreSlim ActiveUsersSemaphore = new SemaphoreSlim(1, 1);
 
     public UserService(string storagePath)
     {
@@ -49,7 +53,7 @@ public class UserService
                             return false;
                         }
 
-                        await Task.Delay(2000); // Poczekaj 2000 ms przed kolejną próbą
+                        await Task.Delay(2000); // Poczekaj 2000 ms (2 sekundy) przed kolejną próbą
                     }
                 }
             }
@@ -75,6 +79,70 @@ public class UserService
             if (fileInfo.Exists)
             {
                 fileInfo.IsReadOnly = false;
+            }
+        }
+    }
+
+    public async Task<bool> PingToUser(string userId, bool IsLoggedOut)
+    {
+        try
+        {
+            await ActiveUsersSemaphore.WaitAsync(); // Asynchroniczne oczekiwanie na dostęp do sekcji krytycznej
+            if(IsLoggedOut == true)
+            {
+                ActiveUsers.Remove(userId);
+            }
+            else
+            {
+                ActiveUsers[userId] = DateTime.UtcNow;
+            }
+            
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+        finally
+        {
+            ActiveUsersSemaphore.Release(); // Zwalnianie blokady
+        }
+    }
+
+    public void RemoveInactiveUsers()
+    {
+        lock (ActiveUsersLock)
+        {
+            var now = DateTime.UtcNow;
+            var inactiveUsers = ActiveUsers
+                .Where(kvp => now - kvp.Value > InactivityTimeout)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var userId in inactiveUsers)
+            {
+                ActiveUsers.Remove(userId);
+                Console.WriteLine($"[Server] User {userId} removed due to inactivity.");
+            }
+        }
+    }
+
+    public void UpdateActiveUsersList(List<string>? usersId)
+    {
+        if (usersId == null || !usersId.Any())
+        {
+            return;
+        }
+
+        lock (ActiveUsersLock)
+        {
+            foreach (var userId in usersId)
+            {
+                if (!ActiveUsers.ContainsKey(userId)) // Jeśli użytkownika nie ma w ActiveUsers
+                {
+                    ActiveUsers[userId] = DateTime.UtcNow; // Dodaj użytkownika z aktualnym czasem
+                    Console.WriteLine($"[Server] Added active user {userId}.");
+                }
             }
         }
     }

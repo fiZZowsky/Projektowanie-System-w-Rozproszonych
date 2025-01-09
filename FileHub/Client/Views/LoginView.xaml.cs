@@ -16,7 +16,7 @@ namespace Client.Views
         }
         private async void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            var clientService = new ClientService("http://localhost:5000");
+            var clientService = new ClientService("http://localhost:5001");
             var response = await clientService.LoginUserAsync(UsernameTextBox.Text, PasswordBox.Password);
 
             if (response.Success)

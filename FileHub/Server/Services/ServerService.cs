@@ -5,6 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Server.Models;
 using Server.Utils;
+using System.Text.Json;
 
 namespace Server.Services
 {
@@ -21,6 +22,8 @@ namespace Server.Services
             _dhtService = dhtService;
             _filesService = new FilesService(filesDirectoryPath, _dhtService);
             _userService = new UserService(AppConfig.DefaultUserDataStoragePath);
+
+            StartInactivityCheck();
         }
 
         public override async Task<NodeListResponse> GetNodes(Empty request, ServerCallContext context)
@@ -197,6 +200,7 @@ namespace Server.Services
 
                 if (user != null)
                 {
+                    // Odpowiedź serwera
                     return new UserDataResponse
                     {
                         Success = true,
@@ -212,6 +216,38 @@ namespace Server.Services
             {
                 return new UserDataResponse { Success = false, Message = $"User login error: {ex.Message}" };
             }
+        }
+
+        public override async Task<PingResponse> Ping(PingRequest request, ServerCallContext context)
+        {
+            Console.WriteLine($"[Server] Received ping from user id {request.UserId}");
+            if (await _userService.PingToUser(request.UserId, request.IsLoggedOut) == true)
+            {
+                return new PingResponse { Success = true, Message = "Ping received" };
+            }
+            else
+            {
+                return new PingResponse { Success = false, Message = $"Encountered an error during ping process to user: {request.UserId}" };
+            }
+        }
+
+        public void StartInactivityCheck()
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    _userService.RemoveInactiveUsers();
+                    await Task.Delay(TimeSpan.FromMinutes(AppConfig.InactivityCheckTime));
+                }
+            });
+        }
+
+        public void UpdateClientsList(string serializedClientsList)
+        {
+            var updatedClientsList = JsonSerializer.Deserialize<List<string>>(serializedClientsList);
+
+            _userService.UpdateActiveUsersList(updatedClientsList);
         }
     }
 }

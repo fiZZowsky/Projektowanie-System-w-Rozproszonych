@@ -118,9 +118,20 @@ namespace Client.Services
             return userResponse;
         }
 
-        public void LogoutUser()
+        public async Task<Common.GRPC.PingResponse> LogoutUser()
         {
-            Session.ClearSession();
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(Session.UserId, availableServers);
+
+            AccountService _accountService = new AccountService();
+            var response = await _accountService.SendPingToServers(responsibleServer, true);
+
+            if (response.Success)
+            {
+                Session.ClearSession();
+            }
+
+            return response;
         }
 
         public static string GetComputerId()
@@ -132,6 +143,15 @@ namespace Client.Services
                 .FirstOrDefault();
 
             return macAddress ?? Guid.NewGuid().ToString();
+        }
+
+        public async Task SendPingToServer()
+        {
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(Session.UserId, availableServers);
+
+            AccountService _accountService = new AccountService();
+            await _accountService.SendPingToServers(responsibleServer, false);
         }
     }
 }

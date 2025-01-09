@@ -15,6 +15,8 @@ namespace Client.Views
         private WatcherService _folderWatcher;
         private string computerdId;
         private ClientService _clientService;
+        private bool IsStartedAnnouncingActivity = false;
+        private CancellationTokenSource _cancellationTokenSource;
 
         public DashboardView()
         {
@@ -23,14 +25,25 @@ namespace Client.Views
 
             this.DataContext = Session.Instance;
 
-            _clientService = new ClientService("http://localhost:5000");
+            _clientService = new ClientService("http://localhost:5001");
+
         }
 
-        private void LogoutButton_Click(object sender, RoutedEventArgs e)
+        private async void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
-            _clientService.LogoutUser();
-            ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
-            MessageBox.Show("Pomyślnie wylogowano użytkownika", "Wylogowano", MessageBoxButton.OK, MessageBoxImage.Information);
+            var response = await _clientService.LogoutUser();
+            IsStartedAnnouncingActivity = false;
+            StopPingTask();
+
+            if (response.Success == true)
+            {
+                ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+                MessageBox.Show("Pomyślnie wylogowano użytkownika", "Wylogowano", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show($"Wystąpił błąd podczas wylogowywania użytkownika.\n{response.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -56,12 +69,18 @@ namespace Client.Views
                 {
                     _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
 
-                MetadataHandler.SaveMetadata(new Metadata
-                {
-                    ComputerId = computerdId,
-                    SyncPath = FolderPathTextBox.Text
-                });
+                    if (IsStartedAnnouncingActivity == false)
+                    {
+                        StartPingTask();
+                    }
 
+                    MetadataHandler.SaveMetadata(new Metadata
+                    {
+                        ComputerId = computerdId,
+                        SyncPath = FolderPathTextBox.Text
+                    });
+
+                    await _clientService.SendPingToServer();
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
@@ -80,7 +99,7 @@ namespace Client.Views
             System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void loadMetadata ()
+        private void loadMetadata()
         {
             computerdId = ClientService.GetComputerId();
             var metadata = MetadataHandler.GetMetadataForComputer(computerdId);
@@ -89,6 +108,37 @@ namespace Client.Views
             {
                 FolderPathTextBox.Text = metadata.SyncPath;
             }
+        }
+
+        private void StartPingTask()
+        {
+            IsStartedAnnouncingActivity = true;
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
+
+            new Thread(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await _clientService.SendPingToServer();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Wystąpił błąd podczas synchronizacji danych: {ex.Message}.\nSynchronizuj dane ponownie.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    await Task.Delay(3000);
+                }
+            })
+            { IsBackground = true }.Start();
+        }
+
+        public void StopPingTask()
+        {
+            _cancellationTokenSource?.Cancel();
         }
     }
 }

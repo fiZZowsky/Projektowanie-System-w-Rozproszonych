@@ -1,4 +1,5 @@
-﻿using Commm.Converters;
+﻿using Client.Utils;
+using Commm.Converters;
 using Common.Models;
 using Grpc.Net.Client;
 using static Common.GRPC.DistributedFileServer;
@@ -46,6 +47,21 @@ public class AccountService
         };
 
         var response = await client.LoginUserAsync(userDataRequest);
+        return response;
+    }
+
+    public async Task<Common.GRPC.PingResponse> SendPingToServers(NodeInfo node, bool isLoggedOut)
+    {
+        using var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
+        var client = new DistributedFileServerClient(channel);
+
+        var pingDataRequest = new Common.GRPC.PingRequest
+        {
+            UserId = Session.UserId,
+            IsLoggedOut = isLoggedOut
+        };
+
+        var response = await client.PingAsync(pingDataRequest);
         return response;
     }
 }

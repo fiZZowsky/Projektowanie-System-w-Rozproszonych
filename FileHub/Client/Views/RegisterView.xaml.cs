@@ -21,7 +21,7 @@ namespace Client.Views
                 return;
             }
 
-            var clientService = new ClientService("http://localhost:5000");
+            var clientService = new ClientService("http://localhost:5001");
             var response = await clientService.RegisterUserAsync(UsernameTextBox.Text, PasswordBox.Password);
 
             if (response.Success)

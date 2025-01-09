@@ -8,6 +8,7 @@ public class ServerManager
     private readonly int _port;
     private readonly DHTService _dhtService;
     private string _storageDirectory;
+    private ServerService? _serverService;
 
     public ServerManager(string defaultStoragePath, int port, DHTService dhtService)
     {
@@ -34,9 +35,11 @@ public class ServerManager
             Console.WriteLine($"[Server {_port}] Using existing storage directory: {_storageDirectory}");
         }
 
+        _serverService = new ServerService(_storageDirectory, _dhtService);
+
         var server = new Grpc.Core.Server
         {
-            Services = { Common.GRPC.DistributedFileServer.BindService(new ServerService(_storageDirectory, _dhtService)) },
+            Services = { Common.GRPC.DistributedFileServer.BindService(_serverService) },
             Ports = { new ServerPort("localhost", _port, ServerCredentials.Insecure) }
         };
 
@@ -53,5 +56,16 @@ public class ServerManager
     public string GetStorageDirectoryPath()
     {
         return _storageDirectory;
+    }
+
+    public void UpdateClientsList(string clientsList)
+    {
+        if (_serverService == null)
+        {
+            Console.Write("[Server] ServerService is not initialized. Start the server first.");
+            return;
+        }
+
+        _serverService.UpdateClientsList(clientsList);
     }
 }
