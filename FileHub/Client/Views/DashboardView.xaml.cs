@@ -4,6 +4,7 @@ using Client.Services;
 using System.IO;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Client.Utils;
+using Common;
 
 namespace Client.Views
 {
@@ -25,7 +26,7 @@ namespace Client.Views
 
             this.DataContext = Session.Instance;
 
-            _clientService = new ClientService("http://localhost:5001");
+            _clientService = new ClientService(AppSettings.DefaultServerAddress);
 
         }
 
@@ -80,7 +81,6 @@ namespace Client.Views
                         SyncPath = FolderPathTextBox.Text
                     });
 
-                    await _clientService.SendPingToServer();
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
@@ -130,7 +130,7 @@ namespace Client.Views
                         MessageBox.Show($"Wystąpił błąd podczas synchronizacji danych: {ex.Message}.\nSynchronizuj dane ponownie.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
 
-                    await Task.Delay(3000);
+                    await Task.Delay(180000); // 3 minuty
                 }
             })
             { IsBackground = true }.Start();

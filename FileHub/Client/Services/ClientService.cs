@@ -121,7 +121,7 @@ namespace Client.Services
         public async Task<Common.GRPC.PingResponse> LogoutUser()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(Session.UserId, availableServers);
+            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
 
             AccountService _accountService = new AccountService();
             var response = await _accountService.SendPingToServers(responsibleServer, true);
@@ -148,7 +148,7 @@ namespace Client.Services
         public async Task SendPingToServer()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(Session.UserId, availableServers);
+            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
 
             AccountService _accountService = new AccountService();
             await _accountService.SendPingToServers(responsibleServer, false);

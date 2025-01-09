@@ -23,4 +23,8 @@
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DataStorage\" />
+  </ItemGroup>
+
 </Project>

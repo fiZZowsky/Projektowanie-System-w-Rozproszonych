@@ -8,7 +8,7 @@ public class AppConfig
     public const int MulticastPort = 5000; // Adres multicastowy
     public const int StartPort = 5001; // główny serwer
     public const int EndPort = 6000;
-    public const int FileLockTimeout = 300; // w ms
+    public const int FileLockTimeout = 10000; // w ms
     public const int InactivityCheckTime = 5; // w minutach
 
     public static string DefaultFilesStoragePath

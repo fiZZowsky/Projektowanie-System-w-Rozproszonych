@@ -1,4 +1,5 @@
 ﻿using Client.Services;
+using Common;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -21,7 +22,7 @@ namespace Client.Views
                 return;
             }
 
-            var clientService = new ClientService("http://localhost:5001");
+            var clientService = new ClientService(AppSettings.DefaultServerAddress);
             var response = await clientService.RegisterUserAsync(UsernameTextBox.Text, PasswordBox.Password);
 
             if (response.Success)
