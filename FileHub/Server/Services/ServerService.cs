@@ -21,7 +21,7 @@ namespace Server.Services
             _path = filesDirectoryPath;
             _dhtService = dhtService;
             _filesService = new FilesService(filesDirectoryPath, _dhtService);
-            _userService = new UserService(AppConfig.DefaultUserDataStoragePath);
+            _userService = new UserService(AppConfig.DefaultUserDataStoragePath, _dhtService.GetServerPort());
 
             StartInactivityCheck();
         }

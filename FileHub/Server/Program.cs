@@ -1,6 +1,7 @@
 ﻿using Server.Services;
 using Server.Utils;
 using Server;
+using System.Text.Json;
 
 class Program
 {
@@ -16,23 +17,30 @@ class Program
                 return;
             }
 
-            var multicastService = new MulticastService();
-            var dhtService = new DHTService(port);
-
-            multicastService.AnnouncePresence(port);
+            var multicastService = new MulticastService(port);
+            var dhtService = new DHTService(port, multicastService);
 
             ServerManager serverManager = new ServerManager(AppConfig.DefaultFilesStoragePath, port, dhtService);
 
             _ = Task.Run(() => multicastService.ListenForServersAsync(
-                discoveredPort =>
+                async discoveredPort =>
                 {
                     Console.WriteLine($"[Discovery] Found server on port {discoveredPort}.");
-                    dhtService.AddNode(discoveredPort);
+                    dhtService.AddDiscoveredNode(discoveredPort);
                 },
                 shutdownPort =>
                 {
                     Console.WriteLine($"[Shutdown] Server on port {shutdownPort} has shut down.");
                     dhtService.RemoveNode(shutdownPort);
+                },
+                serversList =>
+                {
+                    var servers = JsonSerializer.Deserialize<List<int>>(serversList);
+                    if (servers != null)
+                    {
+                        Console.WriteLine("[Multicast] Received updated server list.");
+                        dhtService.UpdateNodesList(servers);
+                    }
                 },
                 clientsList =>
                 {
@@ -43,13 +51,13 @@ class Program
 
             try
             {
-                dhtService.AddNode(port); // Dodaj lokalny serwer do DHT
+                await dhtService.AddNode(port); // Dodaj lokalny serwer do DHT
+                multicastService.AnnouncePresence(port);
                 serverManager.Start();
             }
             finally
             {
                 multicastService.AnnounceShutdown(port);
-                dhtService.RemoveNode(port, serverManager.GetStorageDirectoryPath()); // Usuń lokalny serwer z DHT
             }
         }
         catch (Exception ex)

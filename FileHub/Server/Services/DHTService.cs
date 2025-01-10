@@ -1,33 +1,56 @@
-﻿using Common.GRPC;
+﻿using Common;
+using Common.GRPC;
 using Common.Models;
 using Grpc.Net.Client;
 using Server.Utils;
+using System.Text.Json;
 
 namespace Server.Services
 {
     public class DHTService
     {
         private readonly int _port;
+        private readonly MulticastService _multicastService;
         private readonly List<DHTNode> _nodes = new List<DHTNode>();
         private readonly Dictionary<string, string> _fileToNodeMap = new Dictionary<string, string>(); // Mapowanie plików na serwery
         private readonly string _storageDirectory;
 
-        public DHTService(int port)
+        public DHTService(int port, MulticastService multicastService)
         {
             _port = port;
+            _multicastService = multicastService;
         }
 
-        public async void AddNode(int port)
+        public async Task AddNode(int port)
         {
-            var nodeHash = DHTManager.ComputeHash(port.ToString());
             if (!_nodes.Any(n => n.Port == port))
             {
-                var newNode = new DHTNode { Address = "localhost", Port = port, Hash = nodeHash };
+                var nodeHash = DHTManager.ComputeHash(port.ToString());
+                var newNode = new DHTNode { Address = AppSettings.DefaultAddress, Port = port, Hash = nodeHash };
                 _nodes.Add(newNode);
                 _nodes.Sort((a, b) => a.Hash.CompareTo(b.Hash));
                 Console.WriteLine($"[DHT] Added node: {port} (Hash: {nodeHash}).");
+
                 RecalculateResponsibilities();
                 await RebalanceFiles();
+            }
+        }
+
+        public async void AddDiscoveredNode(int port)
+        {
+            await AddNode(port);
+
+            // Broadcast updated list to new node
+            var serverListJson = JsonSerializer.Serialize(_nodes.Select(n => n.Port));
+            await _multicastService.AnnounceNodesList(port, serverListJson);
+        }
+
+        public async void UpdateNodesList(List<int> ports)
+        {
+            int currport = _port;
+            foreach(var port in ports)
+            {
+                await AddNode(port);
             }
         }
 
@@ -154,8 +177,8 @@ namespace Server.Services
             try
             {
                 // Stworzenie kanału gRPC dla źródłowego i docelowego węzła
-                var sourceChannel = GrpcChannel.ForAddress($"http://localhost:{sourceNode.Port}");
-                var targetChannel = GrpcChannel.ForAddress($"http://localhost:{targetNode.Port}");
+                var sourceChannel = GrpcChannel.ForAddress($"{AppSettings.DefaultAddress}:{sourceNode.Port}");
+                var targetChannel = GrpcChannel.ForAddress($"{AppSettings.DefaultAddress}:{targetNode.Port}");
 
                 var sourceClient = new DistributedFileServer.DistributedFileServerClient(sourceChannel);
                 var targetClient = new DistributedFileServer.DistributedFileServerClient(targetChannel);

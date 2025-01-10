@@ -1,20 +1,25 @@
-﻿using Newtonsoft.Json;
-using Server.Models;
+﻿using Server.Models;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using Newtonsoft.Json;
 
 namespace Server.Services;
 
 public class UserService
 {
     private readonly string _storagePath;
+    private readonly int _port;
     private static readonly TimeSpan FileLockTimeout = TimeSpan.FromSeconds(AppConfig.FileLockTimeout);
     private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(AppConfig.InactivityCheckTime);
     private static readonly object ActiveUsersLock = new object();
     private static Dictionary<string, DateTime> ActiveUsers = new Dictionary<string, DateTime>();
     private static readonly SemaphoreSlim ActiveUsersSemaphore = new SemaphoreSlim(1, 1);
 
-    public UserService(string storagePath)
+    public UserService(string storagePath, int port)
     {
         _storagePath = storagePath;
+        _port = port;
     }
 
     public async Task<List<UserModel>> GetUsers()
@@ -91,6 +96,7 @@ public class UserService
             if(IsLoggedOut == true)
             {
                 ActiveUsers.Remove(userId);
+                AnnounceActiveUsersListChange();
             }
             else
             {
@@ -124,6 +130,11 @@ public class UserService
                 ActiveUsers.Remove(userId);
                 Console.WriteLine($"[Server] User {userId} removed due to inactivity.");
             }
+
+            if(inactiveUsers.Count > 0)
+            {
+                AnnounceActiveUsersListChange();
+            }
         }
     }
 
@@ -142,8 +153,22 @@ public class UserService
                 {
                     ActiveUsers[userId] = DateTime.UtcNow; // Dodaj użytkownika z aktualnym czasem
                     Console.WriteLine($"[Server] Added active user {userId}.");
+                    AnnounceActiveUsersListChange();
                 }
             }
         }
+    }
+
+    private void AnnounceActiveUsersListChange()
+    {
+        var activeUsersKeys = ActiveUsers.Select(n => n.Key);
+        var serializedClientListJson = System.Text.Json.JsonSerializer.Serialize(activeUsersKeys);
+        using var client = new UdpClient();
+        IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
+
+        byte[] message = Encoding.UTF8.GetBytes($"[{_port}]Clients:{serializedClientListJson}");
+        client.Send(message, message.Length, endPoint);
+
+        Console.WriteLine($"[UserService] Announced updated clients list.");
     }
 }

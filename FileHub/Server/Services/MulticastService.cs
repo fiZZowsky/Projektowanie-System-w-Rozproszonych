@@ -2,15 +2,25 @@
 using System.Net.Sockets;
 using System.Net;
 using System.Text;
+using Common;
+using Grpc.Core;
 
 public class MulticastService
 {
+    private readonly int _port;
+
+    public MulticastService(int port)
+    {
+        _port = port;
+    }
+
     public void AnnouncePresence(int port)
     {
+        Task.Delay(100).Wait();
         using var client = new UdpClient();
         IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
 
-        byte[] message = Encoding.UTF8.GetBytes($"Server:{port}");
+        byte[] message = Encoding.UTF8.GetBytes($"[{_port}]Server:{port}");
         client.Send(message, message.Length, endPoint);
 
         Console.WriteLine($"[Multicast] Announced presence on port {port}.");
@@ -21,13 +31,29 @@ public class MulticastService
         using var client = new UdpClient();
         IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
 
-        byte[] message = Encoding.UTF8.GetBytes($"Shutdown:{port}");
+        byte[] message = Encoding.UTF8.GetBytes($"[{_port}]Shutdown:{port}");
         client.Send(message, message.Length, endPoint);
 
         Console.WriteLine($"[Multicast] Announced shutdown on port {port}.");
     }
 
-    public async Task ListenForServersAsync(Action<int> onServerDiscovered, Action<int> onServerShutdown, Action<string> onServerGetClientsList)
+    public async Task AnnounceNodesList(int port, string serializedServerList)
+    {
+        Task.Delay(100).Wait();
+        using var client = new UdpClient();
+        IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
+
+        byte[] message = Encoding.UTF8.GetBytes($"To:{port}:{serializedServerList}");
+        await client.SendAsync(message, message.Length, endPoint);
+
+        Console.WriteLine($"[Multicast] Announced updated nodes list.");
+    }
+
+    public async Task ListenForServersAsync(
+        Action<int> onServerDiscovered,
+        Action<int> onServerShutdown,
+        Action<string> onServerGetServersList,
+        Action<string> onServerGetClientsList)
     {
         using var client = new UdpClient();
         IPEndPoint localEp = new IPEndPoint(IPAddress.Any, AppConfig.MulticastPort);
@@ -45,32 +71,38 @@ public class MulticastService
             var result = await client.ReceiveAsync();
             string message = Encoding.UTF8.GetString(result.Buffer);
 
-            if (message.StartsWith("Server:"))
+            if (message.StartsWith($"[{_port}]Server:"))
             {
-                int port = int.Parse(message.Substring("Server:".Length));
+                continue;
+            }
+            else if (!message.StartsWith($"[{_port}]Server:") && message.Contains("Server:"))
+            {
+                int port = int.Parse(message.Substring($"[{_port}]Server:".Length));
                 onServerDiscovered?.Invoke(port);
             }
-            else if (message.StartsWith("Shutdown:"))
+            else if (message.StartsWith($"[{_port}]Shutdown:"))
             {
-                int port = int.Parse(message.Substring("Shutdown:".Length));
+                continue;
+            }
+            else if (!message.StartsWith($"[{_port}]Shutdown:") && message.Contains("Shutdown:"))
+            {
+                int port = int.Parse(message.Substring($"[{_port}]Shutdown:".Length));
                 onServerShutdown?.Invoke(port);
             }
-            else if (message.StartsWith("Clients:"))
+            else if (message.StartsWith($"To:{_port}:"))
             {
-                string serializedClientList = message.Substring("Clients:".Length);
+                string serializedServerList = message.Substring($"To:{_port}:".Length);
+                onServerGetServersList?.Invoke(serializedServerList);
+            }
+            else if (message.Contains($"[{_port}]Clients:"))
+            {
+                continue;
+            }
+            else if (!message.StartsWith($"[{_port}]Clients:") && message.Contains("Clients:"))
+            {
+                string serializedClientList = message.Substring($"[{_port}]Clients:".Length);
                 onServerGetClientsList?.Invoke(serializedClientList);
             }
         }
-    }
-
-    public void AnnounceClientList(string serializedClientList)
-    {
-        using var client = new UdpClient();
-        IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
-
-        byte[] message = Encoding.UTF8.GetBytes($"Clients:{serializedClientList}");
-        client.Send(message, message.Length, endPoint);
-
-        Console.WriteLine($"[Multicast] Announced updated client list.");
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Common.GRPC;
 using Common.Converters;
 using Grpc.Net.Client;
+using Common;
 
 namespace Server.Services;
 
@@ -57,7 +58,7 @@ public class FilesService
 
         foreach (var node in nodes)
         {
-            if(node.Address == "localhost" && node.Port == _dhtService.GetServerPort()) continue; //Pomijanie aktualnego węzła
+            if(node.Address == AppSettings.DefaultAddress && node.Port == _dhtService.GetServerPort()) continue; //Pomijanie aktualnego węzła
 
             // Pobierz pliki od innego serwera
             var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");

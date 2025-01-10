@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Common;
+using Grpc.Core;
 using Server.Services;
 
 namespace Server.Utils;
@@ -40,7 +41,7 @@ public class ServerManager
         var server = new Grpc.Core.Server
         {
             Services = { Common.GRPC.DistributedFileServer.BindService(_serverService) },
-            Ports = { new ServerPort("localhost", _port, ServerCredentials.Insecure) }
+            Ports = { new ServerPort(AppSettings.DefaultAddress, _port, ServerCredentials.Insecure) }
         };
 
         Console.WriteLine($"[Server] Starting on port {_port}...");
