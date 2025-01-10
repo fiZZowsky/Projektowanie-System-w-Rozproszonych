@@ -1,8 +1,10 @@
 ﻿using Common.Converters;
 using Common.GRPC;
+using Common.Models;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Grpc.Net.Client;
 using Server.Models;
 using Server.Utils;
 using System.Text.Json;
@@ -57,6 +59,29 @@ namespace Server.Services
 
                 var response = await _filesService.SaveFile(request);
                 Console.WriteLine($"[Upload] {request.FileName}.{request.FileType} Status succeeded: {response.Success}");
+
+                var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId);
+                if (usersToSync.Count > 0)
+                {
+                    foreach (var user in usersToSync)
+                    {
+                        var fileData = new TransferRequest
+                        {
+                            UserId = user.UserId.ToString(),
+                            FileName = request.FileName,
+                            FileContent = request.FileContent,
+                            FileType = request.FileType,
+                            CreationDate = request.CreationDate
+                        };
+
+                        bool syncSuccess = await SyncFileToClient(fileData, user.ClientAddress, user.ClientPort);
+                        if (!syncSuccess)
+                        {
+                            Console.WriteLine($"[Sync] Failed to send file to User ID: {user.UserId}, Computer ID: {user.ComputerId}");
+                        }
+                    }
+                }
+
                 return response;
             }
             catch (Exception ex)
@@ -245,9 +270,26 @@ namespace Server.Services
 
         public void UpdateClientsList(string serializedClientsList)
         {
-            var updatedClientsList = JsonSerializer.Deserialize<List<string>>(serializedClientsList);
+            var updatedClientsList = JsonSerializer.Deserialize<List<ActiveUserModel>>(serializedClientsList);
 
             _userService.UpdateActiveUsersList(updatedClientsList);
+        }
+
+        public async Task<bool> SyncFileToClient(TransferRequest request, string clientAddress, int clientPort)
+        {
+            try
+            {
+                using var channel = GrpcChannel.ForAddress($"http://{clientAddress}:{clientPort}");
+                var client = new DistributedFileServer.DistributedFileServerClient(channel);
+
+                var response = await client.TransferFileAsync(request);
+                return response.Success;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SendFileToClient] Error sending file to {clientAddress}:{clientPort} - {ex.Message}");
+                return false;
+            }
         }
     }
 }

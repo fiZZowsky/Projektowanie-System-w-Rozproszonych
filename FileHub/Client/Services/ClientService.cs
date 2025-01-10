@@ -2,6 +2,7 @@
 using Common.Converters;
 using Common.Models;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.Client;
 using System.IO;
 using System.Net.NetworkInformation;
@@ -152,6 +153,46 @@ namespace Client.Services
 
             AccountService _accountService = new AccountService();
             await _accountService.SendPingToServers(responsibleServer, false);
+        }
+
+        public async Task SyncFileFromServerAsync(Common.GRPC.TransferRequest request)
+        {
+            try
+            {
+                var filePath = Path.Combine("SyncedFiles", $"{request.FileName}.{request.FileType}");
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+                await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
+                Console.WriteLine($"File {request.FileName}.{request.FileType} synced successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving synced file: {ex.Message}");
+            }
+        }
+
+        public class ClientGrpcServer : Common.GRPC.DistributedFileServer.DistributedFileServerBase
+        {
+            private readonly ClientService _clientService;
+
+            public ClientGrpcServer(ClientService clientService)
+            {
+                _clientService = clientService;
+            }
+
+            public override async Task<Common.GRPC.TransferResponse> TransferFile(Common.GRPC.TransferRequest request, ServerCallContext context)
+            {
+                try
+                {
+                    await _clientService.SyncFileFromServerAsync(request);
+                    return new Common.GRPC.TransferResponse { Success = true };
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during file transfer: {ex.Message}");
+                    return new Common.GRPC.TransferResponse { Success = false };
+                }
+            }
         }
     }
 }

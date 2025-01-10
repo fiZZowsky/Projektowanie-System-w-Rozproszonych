@@ -23,6 +23,7 @@ message UploadRequest {
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
     string userId = 5;
+    string computerId = 6;
 }
 
 message UploadResponse {
@@ -82,6 +83,8 @@ message DownloadByServerResponse {
 
 message DeleteRequest {
     string fileName = 1;
+    string userId = 2;
+    string computerId = 3;
 }
 
 message DeleteResponse {
@@ -103,7 +106,8 @@ message UserDataResponse {
 
 message PingRequest {
     string userId = 1;
-    bool isLoggedOut = 2;
+    string computerId = 2;
+    bool isLoggedOut = 3;
 }
 
 message PingResponse {
