@@ -35,6 +35,36 @@ namespace Client.Services
             return availableServers[serverIndex];
         }
 
+        public async Task<ActiveUserModel> GetClientAddressAndPortAsync()
+        {
+            try
+            {
+                // Pobierz adres IP klienta
+                var localIpAddress = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
+                    .FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+
+                if (localIpAddress == null)
+                {
+                    throw new Exception("Nie można określić lokalnego adresu IP klienta.");
+                }
+
+                int clientPort = _clientPort;
+
+                var user = new ActiveUserModel
+                {
+                    ClientAddress = localIpAddress.ToString(),
+                    ClientPort = clientPort
+                };
+
+                return (user);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Błąd podczas pobierania adresu i portu klienta: {ex.Message}");
+                throw;
+            }
+        }
+
         public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
         {
             var availableServers = await GetAvailableServersAsync();
@@ -47,13 +77,16 @@ namespace Client.Services
             string fileExtension = Path.GetExtension(fileName).Replace(".", "");
             Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
 
+            var clientInfo = await GetClientAddressAndPortAsync();
+
             var response = await client.UploadFileAsync(new Common.GRPC.UploadRequest
             {
                 FileName = fileNameWithoutExtension,
                 FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
                 FileType = fileExtension,
                 CreationDate = creationDate,
-                UserId = Session.UserId
+                UserId = Session.UserId,
+
             });
 
             return response;
