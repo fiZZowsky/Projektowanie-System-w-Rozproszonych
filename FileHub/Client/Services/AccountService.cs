@@ -54,11 +54,14 @@ public class AccountService
     {
         using var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
         var client = new DistributedFileServerClient(channel);
-        var computerdId = ClientService.GetComputerId();
+        var computerdId = MetadataHandler.GetComputerIp();
+        var port = MetadataHandler.GetAvailablePort();
 
         var pingDataRequest = new Common.GRPC.PingRequest
         {
-            UserId = computerdId,
+            UserId = Session.UserId,
+            Port = port,
+            ComputerId = computerdId,
             IsLoggedOut = isLoggedOut
         };
 

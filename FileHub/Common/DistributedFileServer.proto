@@ -107,7 +107,8 @@ message UserDataResponse {
 message PingRequest {
     string userId = 1;
     string computerId = 2;
-    bool isLoggedOut = 3;
+    int32 port = 3;
+    bool isLoggedOut = 4;
 }
 
 message PingResponse {

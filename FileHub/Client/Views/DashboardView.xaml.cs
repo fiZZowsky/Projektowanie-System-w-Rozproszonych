@@ -75,11 +75,7 @@ namespace Client.Views
                         StartPingTask();
                     }
 
-                    MetadataHandler.SaveMetadata(new Metadata
-                    {
-                        ComputerId = computerdId,
-                        SyncPath = FolderPathTextBox.Text
-                    });
+                    MetadataHandler.SaveMetadata(computerdId,FolderPathTextBox.Text);
 
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -101,7 +97,7 @@ namespace Client.Views
 
         private void loadMetadata()
         {
-            computerdId = ClientService.GetComputerId();
+            computerdId = MetadataHandler.GetComputerIp();
             var metadata = MetadataHandler.GetMetadataForComputer(computerdId);
 
             if (metadata != null)

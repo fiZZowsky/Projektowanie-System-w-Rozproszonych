@@ -246,7 +246,7 @@ namespace Server.Services
         public override async Task<PingResponse> Ping(PingRequest request, ServerCallContext context)
         {
             Console.WriteLine($"[Server] Received ping from user id {request.UserId}");
-            if (await _userService.PingToUser(request.UserId, request.IsLoggedOut) == true)
+            if (await _userService.PingToUser(request) == true)
             {
                 return new PingResponse { Success = true, Message = "Ping received" };
             }

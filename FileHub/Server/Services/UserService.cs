@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Common.Models;
+using Common.GRPC;
 
 namespace Server.Services;
 
@@ -89,19 +90,24 @@ public class UserService
         }
     }
 
-    public async Task<bool> PingToUser(string computerId, bool IsLoggedOut)
+    public async Task<bool> PingToUser(PingRequest request)
     {
         try
         {
             await ActiveUsersSemaphore.WaitAsync(); // Asynchroniczne oczekiwanie na dostęp do sekcji krytycznej
-            var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == computerId);
-            if (IsLoggedOut == true)
+            var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == request.ComputerId);
+
+            if (user != null && request.IsLoggedOut == true)
             {
                 ActiveUsers.Remove(user);
                 AnnounceActiveUsersListChange();
             }
             else
             {
+                user = new ActiveUserModel();
+                user.ComputerId = request.ComputerId;
+                user.ClientPort = request.Port;
+                user.UserId = request.UserId;
                 user.LastPing = DateTime.UtcNow;
             }
             
@@ -166,7 +172,7 @@ public class UserService
 
     private void AnnounceActiveUsersListChange()
     {
-        var activeUsersInfo = ActiveUsers.Select(user => new { user.Id, user.ComputerId });
+        var activeUsersInfo = ActiveUsers.Select(user => new { user.UserId, user.ComputerId });
         var serializedClientListJson = System.Text.Json.JsonSerializer.Serialize(activeUsersInfo);
         using var client = new UdpClient();
         IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);

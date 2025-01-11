@@ -34,37 +34,7 @@ namespace Client.Services
             int serverIndex = hash % availableServers.Count; // Równomierne rozproszenie po serwerach
             return availableServers[serverIndex];
         }
-
-        public async Task<ActiveUserModel> GetClientAddressAndPortAsync()
-        {
-            try
-            {
-                // Pobierz adres IP klienta
-                var localIpAddress = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
-                    .FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-
-                if (localIpAddress == null)
-                {
-                    throw new Exception("Nie można określić lokalnego adresu IP klienta.");
-                }
-
-                int clientPort = _clientPort;
-
-                var user = new ActiveUserModel
-                {
-                    ClientAddress = localIpAddress.ToString(),
-                    ClientPort = clientPort
-                };
-
-                return (user);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Błąd podczas pobierania adresu i portu klienta: {ex.Message}");
-                throw;
-            }
-        }
-
+        
         public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
         {
             var availableServers = await GetAvailableServersAsync();
@@ -77,7 +47,7 @@ namespace Client.Services
             string fileExtension = Path.GetExtension(fileName).Replace(".", "");
             Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
 
-            var clientInfo = await GetClientAddressAndPortAsync();
+            var clientIp = MetadataHandler.GetComputerIp();
 
             var response = await client.UploadFileAsync(new Common.GRPC.UploadRequest
             {
@@ -86,7 +56,7 @@ namespace Client.Services
                 FileType = fileExtension,
                 CreationDate = creationDate,
                 UserId = Session.UserId,
-
+                ComputerId = clientIp,
             });
 
             return response;
@@ -155,7 +125,7 @@ namespace Client.Services
         public async Task<Common.GRPC.PingResponse> LogoutUser()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
+            var responsibleServer = FindResponsibleServer(MetadataHandler.GetComputerIp(), availableServers);
 
             AccountService _accountService = new AccountService();
             var response = await _accountService.SendPingToServers(responsibleServer, true);
@@ -168,21 +138,10 @@ namespace Client.Services
             return response;
         }
 
-        public static string GetComputerId()
-        {
-            var macAddress = NetworkInterface
-                .GetAllNetworkInterfaces()
-                .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .Select(nic => nic.GetPhysicalAddress().ToString())
-                .FirstOrDefault();
-
-            return macAddress ?? Guid.NewGuid().ToString();
-        }
-
         public async Task SendPingToServer()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
+            var responsibleServer = FindResponsibleServer(MetadataHandler.GetComputerIp(), availableServers);
 
             AccountService _accountService = new AccountService();
             await _accountService.SendPingToServers(responsibleServer, false);
