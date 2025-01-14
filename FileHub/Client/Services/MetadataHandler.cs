@@ -2,9 +2,17 @@
 using System.Net.NetworkInformation;
 using System.Text.Json;
 
-public static class MetadataHandler
+public class MetadataHandler
 {
-    private static string GetMetadataFilePath()
+    private static int? _cachedPort;
+    private static string? _cachedComputerId;
+    private static string? _cachedSyncPath;
+
+    public MetadataHandler()
+    {
+    }
+
+    private string GetMetadataFilePath()
     {
         string appDirectory = Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName;
         string dataDirectory = Path.Combine(appDirectory, "Data");
@@ -17,7 +25,7 @@ public static class MetadataHandler
         return Path.Combine(dataDirectory, "metadata.json");
     }
 
-    public static void SaveMetadata(string computerIp, string syncPath)
+    public void SaveMetadata(string computerIp, string syncPath)
     {
         string metadataFilePath = GetMetadataFilePath();
         List<Metadata> metadataList = LoadAllMetadata();
@@ -37,11 +45,12 @@ public static class MetadataHandler
                 SyncPath = syncPath
             });
         }
+        _cachedSyncPath = syncPath;
 
         File.WriteAllText(metadataFilePath, JsonSerializer.Serialize(metadataList));
     }
 
-    public static List<Metadata> LoadAllMetadata()
+    public List<Metadata> LoadAllMetadata()
     {
         string metadataFilePath = GetMetadataFilePath();
 
@@ -67,59 +76,65 @@ public static class MetadataHandler
         }
     }
 
-    public static Metadata GetMetadataForComputer(string computerId)
+    public Metadata GetMetadataForComputer(string computerId)
     {
         var metadataList = LoadAllMetadata();
         return metadataList.Find(m => m.ComputerId == computerId);
     }
 
-    public static string GetComputerIp()
+    public string GetComputerIp()
     {
-        var localIpAddress = NetworkInterface
-            .GetAllNetworkInterfaces()
-            .Where(nic => nic.OperationalStatus == OperationalStatus.Up &&
-                          nic.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                          !nic.Description.ToLower().Contains("virtual") &&
-                          !nic.Description.ToLower().Contains("pseudo"))
-            .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
-            .Where(ip => ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-            .Select(ip => ip.Address)
-            .FirstOrDefault();
-
-        if (localIpAddress == null)
+        if (string.IsNullOrEmpty(_cachedComputerId))
         {
-            throw new Exception("Nie można znaleźć odpowiedniego lokalnego adresu IP.");
-        }
+            var localIpAddress = NetworkInterface
+           .GetAllNetworkInterfaces()
+           .Where(nic => nic.OperationalStatus == OperationalStatus.Up &&
+                         nic.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                         !nic.Description.ToLower().Contains("virtual") &&
+                         !nic.Description.ToLower().Contains("pseudo"))
+           .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
+           .Where(ip => ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+           .Select(ip => ip.Address)
+           .FirstOrDefault();
 
-        return localIpAddress.ToString();
+            if (localIpAddress == null)
+            {
+                throw new Exception("Nie można znaleźć odpowiedniego lokalnego adresu IP.");
+            }
+            return localIpAddress.ToString();
+        }
+        else
+        {
+            return _cachedComputerId;
+        }
     }
 
-    public static string GetDefaultSyncPath()
+    public string GetDefaultSyncPath()
     {
-        string syncPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SyncedFiles");
+        string syncPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "SyncedFiles");
         Directory.CreateDirectory(syncPath);
         return syncPath;
     }
 
-    public static int GetAvailablePort()
+    public string GetSyncPath()
     {
+        return string.IsNullOrWhiteSpace(_cachedSyncPath) ? GetDefaultSyncPath() : _cachedSyncPath;
+    }
+
+    public int GetAvailablePort()
+    {
+        if (_cachedPort.HasValue)
+        {
+            return _cachedPort.Value;
+        }
+
         using (var tcpListener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Any, 0))
         {
             tcpListener.Start();
-            int port = ((System.Net.IPEndPoint)tcpListener.LocalEndpoint).Port;
+            _cachedPort = ((System.Net.IPEndPoint)tcpListener.LocalEndpoint).Port;
             tcpListener.Stop();
-            return port;
         }
-    }
 
-    private static string GetComputerId()
-    {
-        var macAddress = NetworkInterface
-            .GetAllNetworkInterfaces()
-            .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-            .Select(nic => nic.GetPhysicalAddress().ToString())
-            .FirstOrDefault();
-
-        return macAddress ?? Guid.NewGuid().ToString();
+        return _cachedPort.Value;
     }
 }

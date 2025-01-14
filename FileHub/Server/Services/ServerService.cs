@@ -60,7 +60,7 @@ namespace Server.Services
                 var response = await _filesService.SaveFile(request);
                 Console.WriteLine($"[Upload] {request.FileName}.{request.FileType} Status succeeded: {response.Success}");
 
-                var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId);
+                var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId, request.Port);
                 if (usersToSync.Count > 0)
                 {
                     foreach (var user in usersToSync)
@@ -74,7 +74,7 @@ namespace Server.Services
                             CreationDate = request.CreationDate
                         };
 
-                        bool syncSuccess = await SyncFileToClient(fileData, user.ClientAddress, user.ClientPort);
+                        bool syncSuccess = await SyncFileToClient(fileData, user.ComputerId, user.ClientPort);
                         if (!syncSuccess)
                         {
                             Console.WriteLine($"[Sync] Failed to send file to User ID: {user.UserId}, Computer ID: {user.ComputerId}");

@@ -95,7 +95,7 @@ public class UserService
         try
         {
             await ActiveUsersSemaphore.WaitAsync(); // Asynchroniczne oczekiwanie na dostęp do sekcji krytycznej
-            var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == request.ComputerId);
+            var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == request.ComputerId && user.ClientPort == request.Port);
 
             if (user != null && request.IsLoggedOut == true)
             {
@@ -109,6 +109,8 @@ public class UserService
                 user.ClientPort = request.Port;
                 user.UserId = request.UserId;
                 user.LastPing = DateTime.UtcNow;
+
+                ActiveUsers.Add(user);
             }
             
             return true;
@@ -184,10 +186,16 @@ public class UserService
         Console.WriteLine($"[UserService] Announced updated clients list.");
     }
 
-    public List<ActiveUserModel> GetUsersToSync(string userId, string computerId)
+    public List<ActiveUserModel> GetUsersToSync(string userId, string computerId, int port)
     {
+        // Różne PC
+        //return ActiveUsers
+        //.Where(x => x.UserId == userId && x.ComputerId != computerId)
+        //.ToList();
+
+        // Ten sam PC
         return ActiveUsers
-        .Where(x => x.UserId == userId && x.ComputerId != computerId)
-        .ToList();
+            .Where(x => x.UserId == userId && x.ClientPort != port)
+            .ToList();
     }
 }

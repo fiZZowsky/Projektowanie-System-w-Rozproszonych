@@ -24,6 +24,7 @@ message UploadRequest {
     google.protobuf.Timestamp creationDate = 4;
     string userId = 5;
     string computerId = 6;
+    int32 port = 7;
 }
 
 message UploadResponse {
