@@ -131,15 +131,15 @@ public class UserService
         {
             var now = DateTime.UtcNow;
             var inactiveUsers = ActiveUsers
-                .Where(kvp => now - kvp.LastPing > InactivityTimeout)
-                .Select(kvp => kvp.ComputerId)
-                .ToList();
+                        .Where(kvp => now - kvp.LastPing > InactivityTimeout)
+                        .Select(kvp => new { kvp.ComputerId, kvp.ClientPort })
+                        .ToList();
 
-            foreach (var computerId in inactiveUsers)
+            foreach (var user in inactiveUsers)
             {
-                var user = ActiveUsers.FirstOrDefault(x => x.ComputerId == computerId);
-                ActiveUsers.Remove(user);
-                Console.WriteLine($"[Server] User {computerId} removed due to inactivity.");
+                var userToRemove = ActiveUsers.FirstOrDefault(x => x.ComputerId == user.ComputerId && x.ClientPort == user.ClientPort);
+                ActiveUsers.Remove(userToRemove);
+                Console.WriteLine($"[Server] User {user.ComputerId}:{user.ClientPort} removed due to inactivity.");
             }
 
             if(inactiveUsers.Count > 0)

@@ -55,9 +55,10 @@ namespace Client.Services
 
         private async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
-            await _clientService.DeleteFileAsync(e.FullPath);
-            var response = await _clientService.DeleteFileAsync(e.FullPath);
+            string fileName = Path.GetFileName(e.FullPath);
+
+            var response = await _clientService.DeleteFileAsync(fileName);
+
             if (!response.Success)
             {
                 MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -67,9 +68,9 @@ namespace Client.Services
         private async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
-            await _clientService.DeleteFileAsync(e.OldFullPath);
+            string oldFileName = Path.GetFileName(e.OldFullPath);
 
-            var deleteResponse = await _clientService.DeleteFileAsync(e.OldFullPath);
+            var deleteResponse = await _clientService.DeleteFileAsync(oldFileName);
             if(deleteResponse.Success)
             {
                 if (File.Exists(e.FullPath))

@@ -88,7 +88,8 @@ namespace Client.Services
             {
                 FileName = fileName,
                 UserId = Session.UserId,
-                ComputerId = _metadataHandler.GetComputerIp()
+                ComputerId = _metadataHandler.GetComputerIp(),
+                Port = _metadataHandler.GetAvailablePort()
         });
 
             return response;
@@ -149,15 +150,35 @@ namespace Client.Services
             await _accountService.SendPingToServers(responsibleServer, false);
         }
 
-        public async Task SyncFileFromServerAsync(Common.GRPC.TransferRequest request)
+        public async Task SyncFileFromServerAsync(Common.GRPC.TransferRequest request, Common.GRPC.DeleteRequest deleteRequest)
         {
             try
             {
-                var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{request.FileName}.{request.FileType}");
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                if (request != null)
+                {
+                    var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{request.FileName}.{request.FileType}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
 
-                await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
-                Console.WriteLine($"File {request.FileName}.{request.FileType} synced successfully.");
+                    await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
+                    Console.WriteLine($"File {request.FileName}.{request.FileType} synced successfully.");
+                }
+                else if (deleteRequest != null)
+                {
+                    var deleteFilePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{deleteRequest.FileName}");
+                    if (File.Exists(deleteFilePath))
+                    {
+                        File.Delete(deleteFilePath);
+                        Console.WriteLine($"File {deleteRequest.FileName} deleted successfully.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"File {deleteRequest.FileName} not found for deletion.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No request provided for syncing or deleting a file.");
+                }
             }
             catch (Exception ex)
             {

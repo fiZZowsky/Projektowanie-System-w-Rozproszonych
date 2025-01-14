@@ -74,7 +74,7 @@ namespace Server.Services
                             CreationDate = request.CreationDate
                         };
 
-                        bool syncSuccess = await SyncFileToClient(fileData, user.ComputerId, user.ClientPort);
+                        bool syncSuccess = await SyncFileToClient(fileData, null, user.ComputerId, user.ClientPort);
                         if (!syncSuccess)
                         {
                             Console.WriteLine($"[Sync] Failed to send file to User ID: {user.UserId}, Computer ID: {user.ComputerId}");
@@ -160,18 +160,59 @@ namespace Server.Services
 
         public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
         {
-            string filePath = Path.Combine(_path, request.FileName);
+            var response = await _filesService.GetUserFiles(request);
 
-            if (File.Exists(filePath))
+            if(response != null && response.Files.Count() > 0)
             {
-                File.Delete(filePath);
-                Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
-                return new DeleteResponse { Success = true, Message = "Plik usunięty." };
+                var file = response.Files.FirstOrDefault(x => x.FileName + x.FileType == request.FileName);
+                if(file != null)
+                {
+                    if(_dhtService.GetServerPort() != file.ServerId)
+                    {
+                        using var channel = GrpcChannel.ForAddress($"http://{clientAddress}:{clientPort}");
+                        var client = new DistributedFileServer.DistributedFileServerClient(channel);
+                    }
+                    else
+                    {
+                        string filePath = Path.Combine(_path, request.FileName);
+                        if (File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                            Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
+
+                            var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId, request.Port);
+                            if (usersToSync.Count > 0)
+                            {
+                                foreach (var user in usersToSync)
+                                {
+                                    var fileData = new DeleteRequest
+                                    {
+                                        UserId = user.UserId.ToString(),
+                                        FileName = request.FileName
+                                    };
+
+                                    bool syncSuccess = await SyncFileToClient(null, fileData, user.ComputerId, user.ClientPort);
+                                    if (!syncSuccess)
+                                    {
+                                        Console.WriteLine($"[Sync] Failed to send file deletion command to User ID: {user.UserId}, Computer ID: {user.ComputerId}");
+                                    }
+                                }
+                            }
+
+                            return new DeleteResponse { Success = true, Message = "Plik usunięty." };
+                        }
+                    }
+                }
             }
             else
             {
                 return new DeleteResponse { Success = false, Message = "Plik nie znaleziony." };
             }
+        }
+
+        public override async Task<DeleteResponse> DownloadFileByServer(DeleteByServerRequest request, ServerCallContext context)
+        {
+            
         }
 
         public override async Task<TransferResponse> TransferFile(TransferRequest request, ServerCallContext context)
@@ -275,21 +316,35 @@ namespace Server.Services
             _userService.UpdateActiveUsersList(updatedClientsList);
         }
 
-        public async Task<bool> SyncFileToClient(TransferRequest request, string clientAddress, int clientPort)
+        public async Task<bool> SyncFileToClient(TransferRequest request, DeleteRequest delRequest, string clientAddress, int clientPort)
         {
             try
             {
                 using var channel = GrpcChannel.ForAddress($"http://{clientAddress}:{clientPort}");
                 var client = new DistributedFileServer.DistributedFileServerClient(channel);
 
-                var response = await client.TransferFileAsync(request);
-                return response.Success;
+                if (request != null)
+                {
+                    var response = await client.TransferFileAsync(request);
+                    return response.Success;
+                }
+                else if (delRequest != null)
+                {
+                    var response = await client.DeleteFileAsync(delRequest);
+                    return response.Success;
+                }
+                else
+                {
+                    Console.WriteLine("[SyncFileToClient] Both TransferRequest and DeleteRequest are null.");
+                    return false;
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SendFileToClient] Error sending file to {clientAddress}:{clientPort} - {ex.Message}");
+                Console.WriteLine($"[SyncFileToClient] Error sending file to {clientAddress}:{clientPort} - {ex.Message}");
                 return false;
             }
         }
+
     }
 }
