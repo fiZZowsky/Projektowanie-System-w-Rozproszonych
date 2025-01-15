@@ -5,7 +5,7 @@ namespace Client.Services
 {
     public class WatcherService
     {
-        private readonly FileSystemWatcher _watcher;
+        public readonly FileSystemWatcher _watcher;
         private readonly ClientService _clientService;
 
         public WatcherService(string path, ClientService clientService)
@@ -26,7 +26,7 @@ namespace Client.Services
             _watcher.Renamed += OnFileRenamed;
         }
 
-        private async void OnFileCreated(object sender, FileSystemEventArgs e)
+        public async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
             const int maxFileSize = 4 * 1024 * 1024; // 4 MB
 
@@ -53,7 +53,7 @@ namespace Client.Services
             }
         }
 
-        private async void OnFileDeleted(object sender, FileSystemEventArgs e)
+        public async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
             string fileName = Path.GetFileName(e.FullPath);
 
@@ -65,7 +65,7 @@ namespace Client.Services
             }
         }
 
-        private async void OnFileRenamed(object sender, RenamedEventArgs e)
+        public async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
             string oldFileName = Path.GetFileName(e.OldFullPath);

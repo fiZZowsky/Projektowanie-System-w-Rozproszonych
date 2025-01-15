@@ -6,16 +6,20 @@ namespace Client.Services
     public class ClientServerService : Common.GRPC.DistributedFileServer.DistributedFileServerBase
     {
         private ClientService _clientService;
-        public ClientServerService(ClientService clientService)
+        private WatcherService _folderWatcher;
+        public ClientServerService(ClientService clientService, WatcherService folderWatcher)
         {
             _clientService = clientService;
+            _folderWatcher = folderWatcher;
         }
 
         public override async Task<Common.GRPC.TransferResponse> TransferFile(Common.GRPC.TransferRequest request, ServerCallContext context)
         {
             try
             {
+                _folderWatcher._watcher.Created -= _folderWatcher.OnFileCreated;
                 await _clientService.SyncFileFromServerAsync(request, null);
+                _folderWatcher._watcher.Created += _folderWatcher.OnFileCreated;
                 return new Common.GRPC.TransferResponse { Success = true, Message = "Pomyślnie odebrano plik od serwera." };
             }
             catch (Exception ex)
@@ -29,7 +33,9 @@ namespace Client.Services
         {
             try
             {
+                _folderWatcher._watcher.Deleted -= _folderWatcher.OnFileDeleted;
                 await _clientService.SyncFileFromServerAsync(null, request);
+                _folderWatcher._watcher.Deleted += _folderWatcher.OnFileDeleted;
                 return new Common.GRPC.DeleteResponse { Success = true, Message = "Pomyślnie odebrano komendę delete od serwera." };
             }
             catch (Exception ex)

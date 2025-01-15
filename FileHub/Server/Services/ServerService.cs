@@ -1,4 +1,5 @@
-﻿using Common.Converters;
+﻿using Common;
+using Common.Converters;
 using Common.GRPC;
 using Common.Models;
 using Google.Protobuf;
@@ -162,22 +163,37 @@ namespace Server.Services
         {
             var response = await _filesService.GetUserFiles(request);
 
-            if(response != null && response.Files.Count() > 0)
+            if (response != null && response.Files.Count() > 0)
             {
-                var file = response.Files.FirstOrDefault(x => x.FileName + x.FileType == request.FileName);
-                if(file != null)
+                var file = response.Files.FirstOrDefault(x => x.FileName + "." + x.FileType == request.FileName);
+                if (file != null)
                 {
-                    if(_dhtService.GetServerPort() != file.ServerId)
+                    if (_dhtService.GetServerPort() != file.ServerId)
                     {
-                        using var channel = GrpcChannel.ForAddress($"http://{clientAddress}:{clientPort}");
+                        var fileName = $"{file.FileName}_{file.FileType}_{request.UserId}";
+
+                        var deleteRequest = new DeleteRequest
+                        {
+                            UserId = request.UserId,
+                            ComputerId = request.ComputerId,
+                            FileName = fileName
+                        };
+
+                        using var channel = GrpcChannel.ForAddress($"http://{AppSettings.DefaultAddress}:{file.ServerId}");
                         var client = new DistributedFileServer.DistributedFileServerClient(channel);
+                        var deleteResponse = client.DeleteFileFromServer(deleteRequest);
+
+                        return new DeleteResponse { Success = deleteResponse.Success, Message = deleteResponse.Message };
                     }
                     else
                     {
-                        string filePath = Path.Combine(_path, request.FileName);
-                        if (File.Exists(filePath))
+                        string sanitizedFileName = request.FileName.Replace(".", "_");
+                        var matchingFiles = Directory.GetFiles(_path, $"*{sanitizedFileName}*");
+
+                        if (matchingFiles.Length > 0)
                         {
-                            File.Delete(filePath);
+                            var fileToDelete = matchingFiles.First();
+                            File.Delete(fileToDelete);
                             Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
 
                             var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId, request.Port);
@@ -201,18 +217,32 @@ namespace Server.Services
 
                             return new DeleteResponse { Success = true, Message = "Plik usunięty." };
                         }
+                        else
+                        {
+                            return new DeleteResponse { Success = false, Message = "Plik nie znaleziony." };
+                        }
                     }
                 }
+            }
+
+            return new DeleteResponse { Success = false, Message = "Brak plików do usunięcia lub nie znaleziono wskazanego pliku." };
+        }
+
+        public override async Task<DeleteResponse> DeleteFileFromServer(DeleteRequest request, ServerCallContext context)
+        {
+            var matchingFiles = Directory.GetFiles(_path, $"*{request.FileName}*");
+            if (matchingFiles.Length > 0)
+            {
+                var fileToDelete = matchingFiles.First();
+                File.Delete(fileToDelete);
+
+                Console.WriteLine($"[Server] Usunięto plik {Path.GetFileName(fileToDelete)}");
+                return new DeleteResponse { Success = true, Message = $"Usunięto plik {Path.GetFileName(fileToDelete)}" };
             }
             else
             {
                 return new DeleteResponse { Success = false, Message = "Plik nie znaleziony." };
             }
-        }
-
-        public override async Task<DeleteResponse> DownloadFileByServer(DeleteByServerRequest request, ServerCallContext context)
-        {
-            
         }
 
         public override async Task<TransferResponse> TransferFile(TransferRequest request, ServerCallContext context)

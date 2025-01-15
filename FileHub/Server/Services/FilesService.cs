@@ -95,10 +95,13 @@ public class FilesService
                                .Where(file => file.Contains(request.UserId))
                                .ToList();
 
+        var currentServerPort = _dhtService.GetServerPort();
+
         foreach (var filePath in localFiles)
         {
             var fileInfo = new FileInfo(filePath);
             var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
+            fileData.ServerId = currentServerPort;
             userFiles.Add(fileData);
         }
 
@@ -129,7 +132,7 @@ public class FilesService
             }
         }
 
-        userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
+        //userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
         if (userFiles.Any())
         {
             response.Success = true;

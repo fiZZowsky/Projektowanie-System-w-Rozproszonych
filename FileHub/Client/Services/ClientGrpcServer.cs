@@ -6,6 +6,7 @@ public class ClientGrpcServer
 {
     private readonly ClientService _clientService;
     private readonly MetadataHandler _metadataHandler;
+    private WatcherService _folderWatcher;
     private Grpc.Core.Server? _grpcServer;
 
     public ClientGrpcServer(ClientService clientService, MetadataHandler metadataHandler)
@@ -15,11 +16,16 @@ public class ClientGrpcServer
         _grpcServer = null;
     }
 
+    public void SetFolderWatcher(WatcherService folderWatcher)
+    {
+        _folderWatcher = folderWatcher;
+    }
+
     public void StartGrpcServer()
     {
         var clientIp = _metadataHandler.GetComputerIp();
         var clientPort = _metadataHandler.GetAvailablePort();
-        var _clientServerService = new ClientServerService(_clientService);
+        var _clientServerService = new ClientServerService(_clientService, _folderWatcher);
 
         _grpcServer = new Grpc.Core.Server
         {

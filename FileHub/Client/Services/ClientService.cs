@@ -81,7 +81,10 @@ namespace Client.Services
 
         public async Task<Common.GRPC.DeleteResponse> DeleteFileAsync(string fileName)
         {
-            using var channel = GrpcChannel.ForAddress(_serverAddress);
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(fileName, availableServers);
+
+            using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
             var client = new DistributedFileServerClient(channel);
 
             var response = await client.DeleteFileAsync(new Common.GRPC.DeleteRequest
@@ -90,7 +93,7 @@ namespace Client.Services
                 UserId = Session.UserId,
                 ComputerId = _metadataHandler.GetComputerIp(),
                 Port = _metadataHandler.GetAvailablePort()
-        });
+            });
 
             return response;
         }

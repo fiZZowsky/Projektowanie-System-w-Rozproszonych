@@ -74,6 +74,7 @@ namespace Client.Views
                 if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
                 {
                     _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
+                    _grpcServer.SetFolderWatcher(_folderWatcher);
 
                     if (IsStartedAnnouncingActivity == false)
                     {
@@ -94,11 +95,6 @@ namespace Client.Views
             {
                 MessageBox.Show($"Błąd podczas synchronizacji plików: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void loadMetadata()
