@@ -66,19 +66,6 @@ namespace Client.Services
             return response;
         }
 
-        public async Task<Common.GRPC.DownloadResponse> DownloadFileAsync(string userId)
-        {
-            using var channel = GrpcChannel.ForAddress(_serverAddress);
-            var client = new DistributedFileServerClient(channel);
-
-            var response = await client.DownloadFileAsync(new Common.GRPC.DownloadRequest
-            {
-                UserId = userId
-            });
-
-            return response;
-        }
-
         public async Task<Common.GRPC.DeleteResponse> DeleteFileAsync(string fileName)
         {
             var availableServers = await GetAvailableServersAsync();
