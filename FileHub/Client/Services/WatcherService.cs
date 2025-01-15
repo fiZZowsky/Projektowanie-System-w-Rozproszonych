@@ -43,12 +43,19 @@ namespace Client.Services
                     return;
                 }
 
-                var fileContent = File.ReadAllBytes(e.FullPath);
-                var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
-
-                if (!response.Success)
+                try
                 {
-                    MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var fileContent = File.ReadAllBytes(e.FullPath);
+                    var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                    if (!response.Success)
+                    {
+                        MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Nie można uzyskać dostępu do pliku: {ex.Message}");
                 }
             }
         }
