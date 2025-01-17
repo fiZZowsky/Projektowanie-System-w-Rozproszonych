@@ -3,6 +3,8 @@ using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
+using Common.Models;
+using Common.GRPC;
 
 namespace Server.Services;
 
@@ -13,7 +15,7 @@ public class UserService
     private static readonly TimeSpan FileLockTimeout = TimeSpan.FromSeconds(AppConfig.FileLockTimeout);
     private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(AppConfig.InactivityCheckTime);
     private static readonly object ActiveUsersLock = new object();
-    private static Dictionary<string, DateTime> ActiveUsers = new Dictionary<string, DateTime>();
+    private static List<ActiveUserModel> ActiveUsers = new List<ActiveUserModel>();
     private static readonly SemaphoreSlim ActiveUsersSemaphore = new SemaphoreSlim(1, 1);
 
     public UserService(string storagePath, int port)
@@ -88,19 +90,27 @@ public class UserService
         }
     }
 
-    public async Task<bool> PingToUser(string userId, bool IsLoggedOut)
+    public async Task<bool> PingToUser(PingRequest request)
     {
         try
         {
             await ActiveUsersSemaphore.WaitAsync(); // Asynchroniczne oczekiwanie na dostęp do sekcji krytycznej
-            if(IsLoggedOut == true)
+            var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == request.ComputerId && user.ClientPort == request.Port);
+
+            if (user != null && request.IsLoggedOut == true)
             {
-                ActiveUsers.Remove(userId);
+                ActiveUsers.Remove(user);
                 AnnounceActiveUsersListChange();
             }
             else
             {
-                ActiveUsers[userId] = DateTime.UtcNow;
+                user = new ActiveUserModel();
+                user.ComputerId = request.ComputerId;
+                user.ClientPort = request.Port;
+                user.UserId = request.UserId;
+                user.LastPing = DateTime.UtcNow;
+
+                ActiveUsers.Add(user);
             }
             
             return true;
@@ -121,14 +131,15 @@ public class UserService
         {
             var now = DateTime.UtcNow;
             var inactiveUsers = ActiveUsers
-                .Where(kvp => now - kvp.Value > InactivityTimeout)
-                .Select(kvp => kvp.Key)
-                .ToList();
+                        .Where(kvp => now - kvp.LastPing > InactivityTimeout)
+                        .Select(kvp => new { kvp.ComputerId, kvp.ClientPort })
+                        .ToList();
 
-            foreach (var userId in inactiveUsers)
+            foreach (var user in inactiveUsers)
             {
-                ActiveUsers.Remove(userId);
-                Console.WriteLine($"[Server] User {userId} removed due to inactivity.");
+                var userToRemove = ActiveUsers.FirstOrDefault(x => x.ComputerId == user.ComputerId && x.ClientPort == user.ClientPort);
+                ActiveUsers.Remove(userToRemove);
+                Console.WriteLine($"[Server] User {user.ComputerId}:{user.ClientPort} removed due to inactivity.");
             }
 
             if(inactiveUsers.Count > 0)
@@ -138,21 +149,23 @@ public class UserService
         }
     }
 
-    public void UpdateActiveUsersList(List<string>? usersId)
+    public void UpdateActiveUsersList(List<ActiveUserModel> users)
     {
-        if (usersId == null || !usersId.Any())
+        if (users == null || !users.Any())
         {
             return;
         }
 
         lock (ActiveUsersLock)
         {
-            foreach (var userId in usersId)
+            foreach (var user in users)
             {
-                if (!ActiveUsers.ContainsKey(userId)) // Jeśli użytkownika nie ma w ActiveUsers
+                var res = ActiveUsers.FirstOrDefault(x => x.ComputerId == user.ComputerId);
+                if (res == null) // Jeśli użytkownika nie ma w ActiveUsers
                 {
-                    ActiveUsers[userId] = DateTime.UtcNow; // Dodaj użytkownika z aktualnym czasem
-                    Console.WriteLine($"[Server] Added active user {userId}.");
+                    user.LastPing = DateTime.UtcNow;
+                    ActiveUsers.Add(user); // Dodaj użytkownika z aktualnym czasem
+                    Console.WriteLine($"[Server] Added active user {user.UserId}.");
                     AnnounceActiveUsersListChange();
                 }
             }
@@ -161,14 +174,28 @@ public class UserService
 
     private void AnnounceActiveUsersListChange()
     {
-        var activeUsersKeys = ActiveUsers.Select(n => n.Key);
-        var serializedClientListJson = System.Text.Json.JsonSerializer.Serialize(activeUsersKeys);
+        var activeUsersInfo = ActiveUsers.Select(user => new { user.UserId, user.ComputerId });
+        var serializedClientListJson = System.Text.Json.JsonSerializer.Serialize(activeUsersInfo);
         using var client = new UdpClient();
         IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
 
         byte[] message = Encoding.UTF8.GetBytes($"[{_port}]Clients:{serializedClientListJson}");
+
         client.Send(message, message.Length, endPoint);
 
         Console.WriteLine($"[UserService] Announced updated clients list.");
+    }
+
+    public List<ActiveUserModel> GetUsersToSync(string userId, string computerId, int port)
+    {
+        // Różne PC
+        //return ActiveUsers
+        //.Where(x => x.UserId == userId && x.ComputerId != computerId)
+        //.ToList();
+
+        // Ten sam PC
+        return ActiveUsers
+            .Where(x => x.UserId == userId && x.ClientPort != port)
+            .ToList();
     }
 }

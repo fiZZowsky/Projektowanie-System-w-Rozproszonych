@@ -4,7 +4,6 @@ using Common.Models;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
-using System.Net.NetworkInformation;
 using static Common.GRPC.DistributedFileServer;
 
 namespace Client.Services
@@ -12,10 +11,14 @@ namespace Client.Services
     public class ClientService
     {
         private readonly string _serverAddress;
+        private readonly MetadataHandler _metadataHandler;
+        private AccountService _accountService;
 
-        public ClientService(string serverAddress)
+        public ClientService(string serverAddress, MetadataHandler metadataHandler)
         {
             _serverAddress = serverAddress;
+            _metadataHandler = metadataHandler;
+            _accountService = new AccountService(_metadataHandler);
         }
 
         public async Task<List<Common.Models.NodeInfo>> GetAvailableServersAsync()
@@ -33,7 +36,7 @@ namespace Client.Services
             int serverIndex = hash % availableServers.Count; // Równomierne rozproszenie po serwerach
             return availableServers[serverIndex];
         }
-
+        
         public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
         {
             var availableServers = await GetAvailableServersAsync();
@@ -46,26 +49,18 @@ namespace Client.Services
             string fileExtension = Path.GetExtension(fileName).Replace(".", "");
             Timestamp creationDate = DateTimeConverter.ConvertToTimestamp(DateTime.Now);
 
+            var clientIp = _metadataHandler.GetComputerIp();
+            var clientPort = _metadataHandler.GetAvailablePort();
+
             var response = await client.UploadFileAsync(new Common.GRPC.UploadRequest
             {
                 FileName = fileNameWithoutExtension,
                 FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
                 FileType = fileExtension,
                 CreationDate = creationDate,
-                UserId = Session.UserId
-            });
-
-            return response;
-        }
-
-        public async Task<Common.GRPC.DownloadResponse> DownloadFileAsync(string userId)
-        {
-            using var channel = GrpcChannel.ForAddress(_serverAddress);
-            var client = new DistributedFileServerClient(channel);
-
-            var response = await client.DownloadFileAsync(new Common.GRPC.DownloadRequest
-            {
-                UserId = userId
+                UserId = Session.UserId,
+                ComputerId = clientIp,
+                Port = clientPort
             });
 
             return response;
@@ -73,12 +68,18 @@ namespace Client.Services
 
         public async Task<Common.GRPC.DeleteResponse> DeleteFileAsync(string fileName)
         {
-            using var channel = GrpcChannel.ForAddress(_serverAddress);
+            var availableServers = await GetAvailableServersAsync();
+            var responsibleServer = FindResponsibleServer(fileName, availableServers);
+
+            using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
             var client = new DistributedFileServerClient(channel);
 
             var response = await client.DeleteFileAsync(new Common.GRPC.DeleteRequest
             {
-                FileName = fileName
+                FileName = fileName,
+                UserId = Session.UserId,
+                ComputerId = _metadataHandler.GetComputerIp(),
+                Port = _metadataHandler.GetAvailablePort()
             });
 
             return response;
@@ -89,7 +90,6 @@ namespace Client.Services
             var availableServers = await GetAvailableServersAsync();
             var responsibleServer = FindResponsibleServer(username, availableServers);
 
-            AccountService _accountService = new AccountService();
             var userResponse = await _accountService.CreateNewUserAsync(username, password, responsibleServer);
 
             if (userResponse.Success)
@@ -106,7 +106,6 @@ namespace Client.Services
             var availableServers = await GetAvailableServersAsync();
             var responsibleServer = FindResponsibleServer(username, availableServers);
 
-            AccountService _accountService = new AccountService();
             var userResponse = await _accountService.LoginUserAsync(username, password, responsibleServer);
 
             if (userResponse.Success)
@@ -121,9 +120,8 @@ namespace Client.Services
         public async Task<Common.GRPC.PingResponse> LogoutUser()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
+            var responsibleServer = FindResponsibleServer(_metadataHandler.GetComputerIp(), availableServers);
 
-            AccountService _accountService = new AccountService();
             var response = await _accountService.SendPingToServers(responsibleServer, true);
 
             if (response.Success)
@@ -134,24 +132,48 @@ namespace Client.Services
             return response;
         }
 
-        public static string GetComputerId()
-        {
-            var macAddress = NetworkInterface
-                .GetAllNetworkInterfaces()
-                .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .Select(nic => nic.GetPhysicalAddress().ToString())
-                .FirstOrDefault();
-
-            return macAddress ?? Guid.NewGuid().ToString();
-        }
-
         public async Task SendPingToServer()
         {
             var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(GetComputerId(), availableServers);
+            var responsibleServer = FindResponsibleServer(_metadataHandler.GetComputerIp(), availableServers);
 
-            AccountService _accountService = new AccountService();
             await _accountService.SendPingToServers(responsibleServer, false);
+        }
+
+        public async Task SyncFileFromServerAsync(Common.GRPC.TransferRequest request, Common.GRPC.DeleteRequest deleteRequest)
+        {
+            try
+            {
+                if (request != null)
+                {
+                    var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{request.FileName}.{request.FileType}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+                    await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
+                    Console.WriteLine($"File {request.FileName}.{request.FileType} synced successfully.");
+                }
+                else if (deleteRequest != null)
+                {
+                    var deleteFilePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{deleteRequest.FileName}");
+                    if (File.Exists(deleteFilePath))
+                    {
+                        File.Delete(deleteFilePath);
+                        Console.WriteLine($"File {deleteRequest.FileName} deleted successfully.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"File {deleteRequest.FileName} not found for deletion.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No request provided for syncing or deleting a file.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving synced file: {ex.Message}");
+            }
         }
     }
 }

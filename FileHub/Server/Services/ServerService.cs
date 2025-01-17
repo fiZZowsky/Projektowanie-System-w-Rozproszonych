@@ -1,8 +1,11 @@
-﻿using Common.Converters;
+﻿using Common;
+using Common.Converters;
 using Common.GRPC;
+using Common.Models;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Grpc.Net.Client;
 using Server.Models;
 using Server.Utils;
 using System.Text.Json;
@@ -57,6 +60,29 @@ namespace Server.Services
 
                 var response = await _filesService.SaveFile(request);
                 Console.WriteLine($"[Upload] {request.FileName}.{request.FileType} Status succeeded: {response.Success}");
+
+                var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId, request.Port);
+                if (usersToSync.Count > 0)
+                {
+                    foreach (var user in usersToSync)
+                    {
+                        var fileData = new TransferRequest
+                        {
+                            UserId = user.UserId.ToString(),
+                            FileName = request.FileName,
+                            FileContent = request.FileContent,
+                            FileType = request.FileType,
+                            CreationDate = request.CreationDate
+                        };
+
+                        bool syncSuccess = await SyncFileToClient(fileData, null, user.ComputerId, user.ClientPort);
+                        if (!syncSuccess)
+                        {
+                            Console.WriteLine($"[Sync] Failed to send file to User ID: {user.UserId}, Computer ID: {user.ComputerId}");
+                        }
+                    }
+                }
+
                 return response;
             }
             catch (Exception ex)
@@ -135,13 +161,83 @@ namespace Server.Services
 
         public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
         {
-            string filePath = Path.Combine(_path, request.FileName);
+            var response = await _filesService.GetUserFiles(request);
 
-            if (File.Exists(filePath))
+            if (response != null && response.Files.Count() > 0)
             {
-                File.Delete(filePath);
-                Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
-                return new DeleteResponse { Success = true, Message = "Plik usunięty." };
+                var file = response.Files.FirstOrDefault(x => x.FileName + "." + x.FileType == request.FileName);
+                if (file != null)
+                {
+                    if (_dhtService.GetServerPort() != file.ServerId)
+                    {
+                        var fileName = $"{file.FileName}_{file.FileType}_{request.UserId}";
+
+                        var deleteRequest = new DeleteRequest
+                        {
+                            UserId = request.UserId,
+                            ComputerId = request.ComputerId,
+                            FileName = fileName
+                        };
+
+                        using var channel = GrpcChannel.ForAddress($"http://{AppSettings.DefaultAddress}:{file.ServerId}");
+                        var client = new DistributedFileServer.DistributedFileServerClient(channel);
+                        var deleteResponse = client.DeleteFileFromServer(deleteRequest);
+
+                        return new DeleteResponse { Success = deleteResponse.Success, Message = deleteResponse.Message };
+                    }
+                    else
+                    {
+                        string sanitizedFileName = request.FileName.Replace(".", "_");
+                        var matchingFiles = Directory.GetFiles(_path, $"*{sanitizedFileName}*");
+
+                        if (matchingFiles.Length > 0)
+                        {
+                            var fileToDelete = matchingFiles.First();
+                            File.Delete(fileToDelete);
+                            Console.WriteLine($"[Serwer] Plik {request.FileName} został usunięty.");
+
+                            var usersToSync = _userService.GetUsersToSync(request.UserId, request.ComputerId, request.Port);
+                            if (usersToSync.Count > 0)
+                            {
+                                foreach (var user in usersToSync)
+                                {
+                                    var fileData = new DeleteRequest
+                                    {
+                                        UserId = user.UserId.ToString(),
+                                        FileName = request.FileName
+                                    };
+
+                                    bool syncSuccess = await SyncFileToClient(null, fileData, user.ComputerId, user.ClientPort);
+                                    if (!syncSuccess)
+                                    {
+                                        Console.WriteLine($"[Sync] Failed to send file deletion command to User ID: {user.UserId}, Computer ID: {user.ComputerId}");
+                                    }
+                                }
+                            }
+
+                            return new DeleteResponse { Success = true, Message = "Plik usunięty." };
+                        }
+                        else
+                        {
+                            return new DeleteResponse { Success = false, Message = "Plik nie znaleziony." };
+                        }
+                    }
+                }
+            }
+
+            return new DeleteResponse { Success = false, Message = "Brak plików do usunięcia lub nie znaleziono wskazanego pliku." };
+        }
+
+        public override async Task<DeleteResponse> DeleteFileFromServer(DeleteRequest request, ServerCallContext context)
+        {
+            var matchingFiles = Directory.GetFiles(_path, $"*{request.FileName}*");
+            if (matchingFiles.Length > 0)
+            {
+                var fileToDelete = matchingFiles.First();
+                File.Delete(fileToDelete);
+
+                Console.WriteLine($"[Server] Usunięto plik {Path.GetFileName(fileToDelete)}");
+                return new DeleteResponse { Success = true, Message = $"Usunięto plik {Path.GetFileName(fileToDelete)}" };
             }
             else
             {
@@ -221,7 +317,7 @@ namespace Server.Services
         public override async Task<PingResponse> Ping(PingRequest request, ServerCallContext context)
         {
             Console.WriteLine($"[Server] Received ping from user id {request.UserId}");
-            if (await _userService.PingToUser(request.UserId, request.IsLoggedOut) == true)
+            if (await _userService.PingToUser(request) == true)
             {
                 return new PingResponse { Success = true, Message = "Ping received" };
             }
@@ -245,9 +341,40 @@ namespace Server.Services
 
         public void UpdateClientsList(string serializedClientsList)
         {
-            var updatedClientsList = JsonSerializer.Deserialize<List<string>>(serializedClientsList);
+            var updatedClientsList = JsonSerializer.Deserialize<List<ActiveUserModel>>(serializedClientsList);
 
             _userService.UpdateActiveUsersList(updatedClientsList);
         }
+
+        public async Task<bool> SyncFileToClient(TransferRequest request, DeleteRequest delRequest, string clientAddress, int clientPort)
+        {
+            try
+            {
+                using var channel = GrpcChannel.ForAddress($"http://{clientAddress}:{clientPort}");
+                var client = new DistributedFileServer.DistributedFileServerClient(channel);
+
+                if (request != null)
+                {
+                    var response = await client.TransferFileAsync(request);
+                    return response.Success;
+                }
+                else if (delRequest != null)
+                {
+                    var response = await client.DeleteFileAsync(delRequest);
+                    return response.Success;
+                }
+                else
+                {
+                    Console.WriteLine("[SyncFileToClient] Both TransferRequest and DeleteRequest are null.");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SyncFileToClient] Error sending file to {clientAddress}:{clientPort} - {ex.Message}");
+                return false;
+            }
+        }
+
     }
 }

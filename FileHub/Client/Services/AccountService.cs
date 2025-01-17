@@ -8,8 +8,11 @@ namespace Client.Services;
 
 public class AccountService
 {
-    public AccountService()
+    private readonly MetadataHandler _metadataHandler;
+
+    public AccountService(MetadataHandler metadataHandler)
     {
+        _metadataHandler = metadataHandler;
     }
 
     public async Task<Common.GRPC.UserDataResponse> CreateNewUserAsync(string username, string password, NodeInfo node)
@@ -54,11 +57,14 @@ public class AccountService
     {
         using var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
         var client = new DistributedFileServerClient(channel);
-        var computerdId = ClientService.GetComputerId();
+        var computerdId = _metadataHandler.GetComputerIp();
+        var port = _metadataHandler.GetAvailablePort();
 
         var pingDataRequest = new Common.GRPC.PingRequest
         {
-            UserId = computerdId,
+            UserId = Session.UserId,
+            Port = port,
+            ComputerId = computerdId,
             IsLoggedOut = isLoggedOut
         };
 

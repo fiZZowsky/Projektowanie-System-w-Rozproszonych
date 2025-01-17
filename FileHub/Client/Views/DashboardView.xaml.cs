@@ -4,7 +4,6 @@ using Client.Services;
 using System.IO;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Client.Utils;
-using Common;
 
 namespace Client.Views
 {
@@ -13,21 +12,26 @@ namespace Client.Views
     /// </summary>
     public partial class DashboardView : UserControl
     {
-        private WatcherService _folderWatcher;
-        private string computerdId;
+        private MetadataHandler _metadataHandler;
         private ClientService _clientService;
+        private WatcherService _folderWatcher;
+        private ClientGrpcServer _grpcServer;
+
+        private string computerdId;
         private bool IsStartedAnnouncingActivity = false;
         private CancellationTokenSource _cancellationTokenSource;
 
-        public DashboardView()
+
+        public DashboardView(MetadataHandler metadataHandler, ClientService clientService)
         {
             InitializeComponent();
+            _metadataHandler = metadataHandler;
+            _clientService = clientService;
+            _grpcServer = new ClientGrpcServer(_clientService, _metadataHandler);
+
             loadMetadata();
 
             this.DataContext = Session.Instance;
-
-            _clientService = new ClientService(AppSettings.DefaultServerAddress);
-
         }
 
         private async void LogoutButton_Click(object sender, RoutedEventArgs e)
@@ -35,10 +39,11 @@ namespace Client.Views
             var response = await _clientService.LogoutUser();
             IsStartedAnnouncingActivity = false;
             StopPingTask();
+            await _grpcServer.StopGrpcServer();
 
             if (response.Success == true)
             {
-                ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView());
+                ((MainWindow)Application.Current.MainWindow).ChangeView(new LoginView(_metadataHandler, _clientService));
                 MessageBox.Show("Pomyślnie wylogowano użytkownika", "Wylogowano", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
@@ -69,17 +74,15 @@ namespace Client.Views
                 if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
                 {
                     _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
+                    _grpcServer.SetFolderWatcher(_folderWatcher);
 
                     if (IsStartedAnnouncingActivity == false)
                     {
                         StartPingTask();
+                        _grpcServer.StartGrpcServer();
                     }
 
-                    MetadataHandler.SaveMetadata(new Metadata
-                    {
-                        ComputerId = computerdId,
-                        SyncPath = FolderPathTextBox.Text
-                    });
+                    _metadataHandler.SaveMetadata(computerdId,FolderPathTextBox.Text);
 
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -94,15 +97,10 @@ namespace Client.Views
             }
         }
 
-        private void AdvancedSettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            System.Windows.MessageBox.Show("Tak wstępnie jakby jakieś miały być :).", "Ustawienia", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
         private void loadMetadata()
         {
-            computerdId = ClientService.GetComputerId();
-            var metadata = MetadataHandler.GetMetadataForComputer(computerdId);
+            computerdId = _metadataHandler.GetComputerIp();
+            var metadata = _metadataHandler.GetMetadataForComputer(computerdId);
 
             if (metadata != null)
             {

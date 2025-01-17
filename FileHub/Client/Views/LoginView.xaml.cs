@@ -1,6 +1,4 @@
 ﻿using Client.Services;
-using Client.Utils;
-using Common;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -11,18 +9,21 @@ namespace Client.Views
     /// </summary>
     public partial class LoginView : UserControl
     {
-        public LoginView()
+        private MetadataHandler _metadataHandler;
+        private ClientService _clientService;
+        public LoginView(MetadataHandler metadataHandler, ClientService clientService)
         {
             InitializeComponent();
+            _metadataHandler = metadataHandler;
+            _clientService = clientService;
         }
         private async void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            var clientService = new ClientService(AppSettings.DefaultServerAddress);
-            var response = await clientService.LoginUserAsync(UsernameTextBox.Text, PasswordBox.Password);
+            var response = await _clientService.LoginUserAsync(UsernameTextBox.Text, PasswordBox.Password);
 
             if (response.Success)
             {
-                ((MainWindow)Application.Current.MainWindow).ChangeView(new DashboardView());
+                ((MainWindow)Application.Current.MainWindow).ChangeView(new DashboardView(_metadataHandler, _clientService));
             }
             else
             {
@@ -31,7 +32,7 @@ namespace Client.Views
         }
         private void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
-            ((MainWindow)Application.Current.MainWindow).ChangeView(new RegisterView());
+            ((MainWindow)Application.Current.MainWindow).ChangeView(new RegisterView(_metadataHandler, _clientService));
         }
     }
 }

@@ -5,7 +5,7 @@ namespace Client.Services
 {
     public class WatcherService
     {
-        private readonly FileSystemWatcher _watcher;
+        public readonly FileSystemWatcher _watcher;
         private readonly ClientService _clientService;
 
         public WatcherService(string path, ClientService clientService)
@@ -26,7 +26,7 @@ namespace Client.Services
             _watcher.Renamed += OnFileRenamed;
         }
 
-        private async void OnFileCreated(object sender, FileSystemEventArgs e)
+        public async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
             const int maxFileSize = 4 * 1024 * 1024; // 4 MB
 
@@ -43,33 +43,41 @@ namespace Client.Services
                     return;
                 }
 
-                var fileContent = File.ReadAllBytes(e.FullPath);
-                var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
-
-                if (!response.Success)
+                try
                 {
-                    MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var fileContent = File.ReadAllBytes(e.FullPath);
+                    var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+
+                    if (!response.Success)
+                    {
+                        MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Nie można uzyskać dostępu do pliku: {ex.Message}");
                 }
             }
         }
 
-        private async void OnFileDeleted(object sender, FileSystemEventArgs e)
+        public async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
-            await _clientService.DeleteFileAsync(e.FullPath);
-            var response = await _clientService.DeleteFileAsync(e.FullPath);
+            string fileName = Path.GetFileName(e.FullPath);
+
+            var response = await _clientService.DeleteFileAsync(fileName);
+
             if (!response.Success)
             {
                 MessageBox.Show(response.Message, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private async void OnFileRenamed(object sender, RenamedEventArgs e)
+        public async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
             Console.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
-            await _clientService.DeleteFileAsync(e.OldFullPath);
+            string oldFileName = Path.GetFileName(e.OldFullPath);
 
-            var deleteResponse = await _clientService.DeleteFileAsync(e.OldFullPath);
+            var deleteResponse = await _clientService.DeleteFileAsync(oldFileName);
             if(deleteResponse.Success)
             {
                 if (File.Exists(e.FullPath))

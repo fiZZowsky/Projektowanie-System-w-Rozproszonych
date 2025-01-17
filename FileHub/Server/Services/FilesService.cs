@@ -85,4 +85,65 @@ public class FilesService
 
         return response;
     }
+
+    public async Task<DownloadResponse> GetUserFiles(DeleteRequest request)
+    {
+        var response = new DownloadResponse();
+        var userFiles = new List<FileData>();
+
+        var localFiles = Directory.GetFiles(_path)
+                               .Where(file => file.Contains(request.UserId))
+                               .ToList();
+
+        var currentServerPort = _dhtService.GetServerPort();
+
+        foreach (var filePath in localFiles)
+        {
+            var fileInfo = new FileInfo(filePath);
+            var fileData = await FormatConverter.DecodeFileDataFromName(fileInfo);
+            fileData.ServerId = currentServerPort;
+            userFiles.Add(fileData);
+        }
+
+        var nodes = _dhtService.GetNodes();
+
+        foreach (var node in nodes)
+        {
+            if (node.Address == AppSettings.DefaultAddress && node.Port == _dhtService.GetServerPort()) continue; //Pomijanie aktualnego węzła
+
+            // Pobierz pliki od innego serwera
+            var channel = GrpcChannel.ForAddress($"http://{node.Address}:{node.Port}");
+            var client = new DistributedFileServer.DistributedFileServerClient(channel);
+
+            var downloadRequest = new DownloadRequest
+            {
+                UserId = request.UserId
+            };
+
+            var remoteResponse = await client.DownloadFileAsync(downloadRequest);
+            if (remoteResponse.Success)
+            {
+                foreach(var file in remoteResponse.Files)
+                {
+                    file.ServerId = node.Port;
+                }
+
+                userFiles.AddRange(remoteResponse.Files);
+            }
+        }
+
+        //userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
+        if (userFiles.Any())
+        {
+            response.Success = true;
+            response.Files.AddRange(userFiles);
+        }
+        else
+        {
+            response.Success = false;
+            response.Message = "No files found for this user.";
+        }
+
+        return response;
+    }
 }

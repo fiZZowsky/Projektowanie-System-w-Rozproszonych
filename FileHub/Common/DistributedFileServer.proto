@@ -11,6 +11,7 @@ service DistributedFileServer {
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
     rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
     rpc DeleteFile (DeleteRequest) returns (DeleteResponse);
+    rpc DeleteFileFromServer (DeleteRequest) returns (DeleteResponse);
     rpc TransferFile (TransferRequest) returns (TransferResponse);
     rpc RegisterNewUser (UserDataRequest) returns (UserDataResponse);
     rpc LoginUser (UserDataRequest) returns (UserDataResponse);
@@ -23,6 +24,8 @@ message UploadRequest {
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
     string userId = 5;
+    string computerId = 6;
+    int32 port = 7;
 }
 
 message UploadResponse {
@@ -57,6 +60,7 @@ message FileData {
     string fileType = 3;
     google.protobuf.Timestamp creationDate = 4;
     string userId = 5;
+    int32 serverId = 6;
 }
 
 message NodeListResponse {
@@ -82,6 +86,9 @@ message DownloadByServerResponse {
 
 message DeleteRequest {
     string fileName = 1;
+    string userId = 2;
+    string computerId = 3;
+    int32 port = 4;
 }
 
 message DeleteResponse {
@@ -103,7 +110,9 @@ message UserDataResponse {
 
 message PingRequest {
     string userId = 1;
-    bool isLoggedOut = 2;
+    string computerId = 2;
+    int32 port = 3;
+    bool isLoggedOut = 4;
 }
 
 message PingResponse {
