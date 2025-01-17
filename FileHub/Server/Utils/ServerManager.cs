@@ -21,7 +21,7 @@ public class ServerManager
     public void Start()
     {
         var uniqueId = Guid.NewGuid().ToString();
-        var serverPrefix = $"{_port}_";
+        var serverPrefix = $"{_port}";
         var serverDirectories = Directory.GetDirectories(_storageDirectory, $"{serverPrefix}*");
 
         if (serverDirectories.Length == 0)

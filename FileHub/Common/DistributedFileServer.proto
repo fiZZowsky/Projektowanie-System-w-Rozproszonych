@@ -35,6 +35,8 @@ message UploadResponse {
 
 message DownloadRequest {
     string userId = 1;
+    string computerId = 2;
+    int32 port = 3;
 }
 
 message DownloadByServerRequest {

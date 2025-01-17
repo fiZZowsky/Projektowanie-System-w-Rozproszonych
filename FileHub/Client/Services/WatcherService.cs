@@ -21,9 +21,16 @@ namespace Client.Services
                 EnableRaisingEvents = true
             };
 
+            GetUserFilesAfterSyncButton();
+
             _watcher.Created += OnFileCreated;
             _watcher.Deleted += OnFileDeleted;
             _watcher.Renamed += OnFileRenamed;
+        }
+
+        public async void GetUserFilesAfterSyncButton()
+        {
+            await _clientService.GetUserFilesAsync();
         }
 
         public async void OnFileCreated(object sender, FileSystemEventArgs e)
