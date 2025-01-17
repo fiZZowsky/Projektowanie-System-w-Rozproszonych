@@ -9,7 +9,7 @@ namespace Client.Services
     {
         public readonly FileSystemWatcher _watcher;
         private readonly ClientService _clientService;
-
+        const int maxFileSize = 4 * 1024 * 1024; // 4 MB
         private static readonly ConcurrentDictionary<string, DateTime> _fileEventTimestamps = new();
 
         public WatcherService(string path, ClientService clientService)
@@ -25,7 +25,7 @@ namespace Client.Services
                 EnableRaisingEvents = false
             };
 
-            GetUserFilesAfterSync();
+            SynchronizeUserFilesAfterSyncClicked();
 
             _watcher.Created += OnFileCreated;
             _watcher.Deleted += OnFileDeleted;
@@ -33,17 +33,15 @@ namespace Client.Services
             _watcher.Changed += OnFileChanged;
         }
 
-        public async void GetUserFilesAfterSync()
+        public async void SynchronizeUserFilesAfterSyncClicked()
         {
-            await _clientService.GetUserFilesAsync();
+            await _clientService.SynchronizeUserFilesAsync();
 
             _watcher.EnableRaisingEvents = true;
         }
 
         public async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            const int maxFileSize = 4 * 1024 * 1024; // 4 MB
-
             Debug.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
 
             if (File.Exists(e.FullPath))

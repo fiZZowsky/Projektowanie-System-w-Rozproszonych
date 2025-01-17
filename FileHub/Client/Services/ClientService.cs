@@ -4,6 +4,7 @@ using Common.Models;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using System.IO;
+using System.Windows;
 using static Common.GRPC.DistributedFileServer;
 
 namespace Client.Services
@@ -37,7 +38,7 @@ namespace Client.Services
             return availableServers[serverIndex];
         }
 
-        public async Task GetUserFilesAsync()
+        public async Task SynchronizeUserFilesAsync()
         {
             var availableServers = await GetAvailableServersAsync();
             var responsibleServer = FindResponsibleServer(_metadataHandler.GetComputerIp(), availableServers);
@@ -53,20 +54,80 @@ namespace Client.Services
             };
 
             var response = await client.DownloadFileAsync(request);
+
+            if (!response.Success)
+            {
+                MessageBox.Show("Nie udało się pobrać plików z serwera.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (response.Success == true)
             {
+                var syncPath = _metadataHandler.GetSyncPath();
+
+                var localFiles = Directory.GetFiles(syncPath, "*", SearchOption.AllDirectories)
+                  .Select(path => Path.GetRelativePath(syncPath, path))
+                  .ToList();
+
+                var serverFiles = response.Files.Select(file => $"{file.FileName}.{file.FileType}").ToList();
+                var filesToUpload = localFiles.Except(serverFiles).ToList();
+
                 foreach (var file in response.Files)
                 {
-                    var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{file.FileName}.{file.FileType}");
+                    var filePath = Path.Combine($"{syncPath}/{file.FileName}.{file.FileType}");
                     if (!File.Exists(filePath))
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                         await File.WriteAllBytesAsync(filePath, file.FileContent.ToByteArray());
                     }
                 }
+
+                const int maxChunkSize = 4 * 1024 * 1024; // 4 MB
+                var tooBigFiles = new List<string>();
+                var uploadErrorResponseFiles = new Dictionary<string, string>();
+                foreach (var relativeFilePath in filesToUpload)
+                {
+                    var fullPath = Path.Combine(syncPath, relativeFilePath);
+
+                    if (File.Exists(fullPath))
+                    {
+                        var fileContent = await File.ReadAllBytesAsync(fullPath);
+
+                        if (fileContent.Length <= maxChunkSize)
+                        {
+                            var uploadResponse = await UploadFileAsync(fullPath, fileContent);
+
+                            if(uploadResponse != null && uploadResponse.Success == false)
+                            {
+                                uploadErrorResponseFiles.Add(relativeFilePath, uploadResponse.Message);
+                            }
+                        }
+                        else
+                        {
+                            tooBigFiles.Add(relativeFilePath);
+                        }
+                    }
+                }
+
+                if(tooBigFiles.Count > 0)
+                {
+                    var errorMessage = "Błąd synchronizacji plików z serwerem.\nNastępujące pliki przekraczają rozmiar 4 MB:\n" +
+                       string.Join("\n", tooBigFiles);
+
+                    MessageBox.Show(errorMessage, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+                if (uploadErrorResponseFiles.Count > 0)
+                {
+                    var errorMessage = "Błąd synchronizacji plików z serwerem:\n" +
+                       string.Join("\n",
+                           uploadErrorResponseFiles.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+
+                    MessageBox.Show(errorMessage, "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
-        
+
         public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
         {
             var availableServers = await GetAvailableServersAsync();

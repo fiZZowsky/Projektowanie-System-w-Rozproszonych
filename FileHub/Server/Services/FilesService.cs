@@ -65,7 +65,7 @@ public class FilesService
             var client = new DistributedFileServer.DistributedFileServerClient(channel);
 
             var remoteResponse = await client.DownloadLocalFilesAsync(request);
-            if (remoteResponse.Success)
+            if (remoteResponse.Success && !remoteResponse.Message.Contains("No files found"))
             {
                 userFiles.AddRange(remoteResponse.Files);
             }
@@ -79,7 +79,7 @@ public class FilesService
         }
         else
         {
-            response.Success = false;
+            response.Success = true;
             response.Message = "No files found for this user.";
         }
 
@@ -109,7 +109,7 @@ public class FilesService
         }
         else
         {
-            response.Success = false;
+            response.Success = true;
             response.Message = "No files found for this user.";
         }
         return response;

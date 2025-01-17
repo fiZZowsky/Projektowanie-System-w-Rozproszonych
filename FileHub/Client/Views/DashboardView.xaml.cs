@@ -74,7 +74,7 @@ namespace Client.Views
                 if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
                 {
                     _folderWatcher?.Dispose();
-                    await _clientService.GetUserFilesAsync();
+                    StopPingTask();
                     _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
                     _grpcServer.SetFolderWatcher(_folderWatcher);
 
