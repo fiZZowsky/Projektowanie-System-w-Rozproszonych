@@ -151,5 +151,19 @@ namespace Client.Services
                 MessageBox.Show($"Wystąpił błąd podczas obsługi zmiany pliku: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        public void Dispose()
+        {
+            if (_watcher != null)
+            {
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Created -= OnFileCreated;
+                _watcher.Deleted -= OnFileDeleted;
+                _watcher.Renamed -= OnFileRenamed;
+                _watcher.Changed -= OnFileChanged;
+                _watcher.Dispose();
+                Debug.WriteLine("[FolderWatcher] Watcher został zwolniony.");
+            }
+        }
     }
 }

@@ -73,6 +73,8 @@ namespace Client.Views
             {
                 if (!string.IsNullOrEmpty(FolderPathTextBox.Text) && Directory.Exists(FolderPathTextBox.Text))
                 {
+                    _folderWatcher?.Dispose();
+                    await _clientService.GetUserFilesAsync();
                     _folderWatcher = new WatcherService(FolderPathTextBox.Text, _clientService);
                     _grpcServer.SetFolderWatcher(_folderWatcher);
 
@@ -81,7 +83,6 @@ namespace Client.Views
                         StartPingTask();
                         _grpcServer.StartGrpcServer();
                     }
-
                     _metadataHandler.SaveMetadata(computerdId,FolderPathTextBox.Text);
 
                     MessageBox.Show("Synchronizacja plików rozpoczęta!", "Synchronizacja", MessageBoxButton.OK, MessageBoxImage.Information);
