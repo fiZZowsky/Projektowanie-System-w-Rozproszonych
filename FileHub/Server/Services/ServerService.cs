@@ -170,7 +170,7 @@ namespace Server.Services
                 {
                     if (_dhtService.GetServerPort() != file.ServerId)
                     {
-                        var fileName = $"{file.FileName}_{file.FileType}_{request.UserId}";
+                        var fileName = $"{file.FileName}~{file.FileType}~{request.UserId}";
 
                         var deleteRequest = new DeleteRequest
                         {
@@ -187,7 +187,7 @@ namespace Server.Services
                     }
                     else
                     {
-                        string sanitizedFileName = request.FileName.Replace(".", "_");
+                        string sanitizedFileName = request.FileName.Replace(".", "~");
                         var matchingFiles = Directory.GetFiles(_path, $"*{sanitizedFileName}*");
 
                         if (matchingFiles.Length > 0)
@@ -249,7 +249,7 @@ namespace Server.Services
         {
             try
             {
-                var filePath = Path.Combine("_path", request.FileName);
+                var filePath = Path.Combine(_path, request.FileName);
                 await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
                 return new TransferResponse { Success = true, Message = "File transferred successfully." };
             }
@@ -296,7 +296,6 @@ namespace Server.Services
 
                 if (user != null)
                 {
-                    // Odpowiedź serwera
                     return new UserDataResponse
                     {
                         Success = true,

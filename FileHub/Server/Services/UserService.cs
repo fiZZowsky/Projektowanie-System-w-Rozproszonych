@@ -173,7 +173,6 @@ public class UserService
                     user.LastPing = DateTime.UtcNow;
                     ActiveUsers.Add(user); // Dodaj użytkownika z aktualnym czasem
                     Console.WriteLine($"[Server] Added active user {user.UserId}.");
-                    //AnnounceActiveUsersListChange();
                 }
                 else
                 {
@@ -199,11 +198,6 @@ public class UserService
 
     public List<ActiveUserModel> GetUsersToSync(string userId, string computerId, int port)
     {
-        // Różne PC
-        //return ActiveUsers
-        //.Where(x => x.UserId == userId && x.ComputerId != computerId)
-        //.ToList();
-
         // Ten sam PC
         return ActiveUsers
             .Where(x => x.UserId == userId && x.ClientPort != port)

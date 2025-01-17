@@ -19,7 +19,7 @@ public class FilesService
     public async Task<UploadResponse> SaveFile(UploadRequest request)
     {
         string creationDate = FormatConverter.SanitizeFileName(DateTimeConverter.ConvertToDateTime(request.CreationDate).ToString("yyyyMMdd-HHmmss"));
-        var fileName = $"{request.FileName}_{request.FileType}_{request.UserId}_{creationDate}_{Guid.NewGuid()}";
+        var fileName = $"{request.FileName}~{request.FileType}~{request.UserId}~{creationDate}~{Guid.NewGuid()}";
         var filePath = Path.Combine(_path, fileName);
 
         await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
@@ -44,7 +44,7 @@ public class FilesService
         var userFiles = new List<FileData>();
 
         var localFiles = Directory.GetFiles(_path)
-                               .Where(file => file.Contains(request.UserId))
+                               .Where(file => file.Contains($"~{request.UserId}~"))
                                .ToList();
 
         foreach (var filePath in localFiles)
@@ -92,7 +92,7 @@ public class FilesService
         var userFiles = new List<FileData>();
 
         var localFiles = Directory.GetFiles(_path)
-                               .Where(file => file.Contains(request.UserId))
+                               .Where(file => file.Contains($"~{request.UserId}~"))
                                .ToList();
 
         var currentServerPort = _dhtService.GetServerPort();
@@ -132,7 +132,6 @@ public class FilesService
             }
         }
 
-        //userFiles = response.Files.GroupBy(f => f.FileName).Select(g => g.First()).ToList();
         if (userFiles.Any())
         {
             response.Success = true;
