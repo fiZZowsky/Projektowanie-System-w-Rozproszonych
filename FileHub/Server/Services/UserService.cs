@@ -97,10 +97,16 @@ public class UserService
             await ActiveUsersSemaphore.WaitAsync(); // Asynchroniczne oczekiwanie na dostęp do sekcji krytycznej
             var user = ActiveUsers.FirstOrDefault(user => user.ComputerId == request.ComputerId && user.ClientPort == request.Port);
 
-            if (user != null && request.IsLoggedOut == true)
+            if (user != null)
             {
-                ActiveUsers.Remove(user);
-                AnnounceActiveUsersListChange();
+                if (request.IsLoggedOut == true)
+                {
+                    ActiveUsers.Remove(user);
+                }
+                else
+                {
+                    user.LastPing = DateTime.UtcNow;
+                }
             }
             else
             {
@@ -112,7 +118,8 @@ public class UserService
 
                 ActiveUsers.Add(user);
             }
-            
+            AnnounceActiveUsersListChange();
+
             return true;
         }
         catch (Exception)
@@ -166,7 +173,11 @@ public class UserService
                     user.LastPing = DateTime.UtcNow;
                     ActiveUsers.Add(user); // Dodaj użytkownika z aktualnym czasem
                     Console.WriteLine($"[Server] Added active user {user.UserId}.");
-                    AnnounceActiveUsersListChange();
+                    //AnnounceActiveUsersListChange();
+                }
+                else
+                {
+                    res.LastPing = DateTime.UtcNow;
                 }
             }
         }
@@ -174,7 +185,7 @@ public class UserService
 
     private void AnnounceActiveUsersListChange()
     {
-        var activeUsersInfo = ActiveUsers.Select(user => new { user.UserId, user.ComputerId });
+        var activeUsersInfo = ActiveUsers.Select(user => new { user.UserId, user.ComputerId, user.ClientPort });
         var serializedClientListJson = System.Text.Json.JsonSerializer.Serialize(activeUsersInfo);
         using var client = new UdpClient();
         IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.MulticastAddress), AppConfig.MulticastPort);
