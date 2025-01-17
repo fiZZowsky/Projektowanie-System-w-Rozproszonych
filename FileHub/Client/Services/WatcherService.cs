@@ -35,6 +35,8 @@ namespace Client.Services
 
         public async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
+            if (!ShouldProcessEvent(e.FullPath)) return;
+
             const int maxFileSize = 4 * 1024 * 1024; // 4 MB
 
             if (File.Exists(e.FullPath))
