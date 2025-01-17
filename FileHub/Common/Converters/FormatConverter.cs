@@ -17,7 +17,7 @@ public class FormatConverter
 
     public static async Task<FileData> DecodeFileDataFromName(FileInfo fileInfo)
     {
-        var fileNameParts = fileInfo.Name.Split('_');
+        var fileNameParts = fileInfo.Name.Split('~');
 
         if (fileNameParts.Length < 5)
         {

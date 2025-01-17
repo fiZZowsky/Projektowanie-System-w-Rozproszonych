@@ -39,32 +39,32 @@ namespace Client.Services
 
         public async Task GetUserFilesAsync()
         {
-            var availableServers = await GetAvailableServersAsync();
-            var responsibleServer = FindResponsibleServer(_metadataHandler.GetComputerIp(), availableServers);
+            //var availableServers = await GetAvailableServersAsync();
+            //var responsibleServer = FindResponsibleServer(_metadataHandler.GetComputerIp(), availableServers);
 
-            using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
-            var client = new DistributedFileServerClient(channel);
+            //using var channel = GrpcChannel.ForAddress($"http://{responsibleServer.Address}:{responsibleServer.Port}");
+            //var client = new DistributedFileServerClient(channel);
 
-            var request = new Common.GRPC.DownloadRequest
-            {
-                UserId = Session.UserId,
-                ComputerId = _metadataHandler.GetComputerIp(),
-                Port = _metadataHandler.GetAvailablePort()
-            };
+            //var request = new Common.GRPC.DownloadRequest
+            //{
+            //    UserId = Session.UserId,
+            //    ComputerId = _metadataHandler.GetComputerIp(),
+            //    Port = _metadataHandler.GetAvailablePort()
+            //};
 
-            var response = await client.DownloadFileAsync(request);
-            if (response.Success == true)
-            {
-                foreach (var file in response.Files)
-                {
-                    var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{file.FileName}.{file.FileType}");
-                    if (!File.Exists(filePath))
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-                        await File.WriteAllBytesAsync(filePath, file.FileContent.ToByteArray());
-                    }
-                }
-            }
+            //var response = await client.DownloadFileAsync(request);
+            //if (response.Success == true)
+            //{
+            //    foreach (var file in response.Files)
+            //    {
+            //        var filePath = Path.Combine($"{_metadataHandler.GetSyncPath()}/{file.FileName}.{file.FileType}");
+            //        if (!File.Exists(filePath))
+            //        {
+            //            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            //            await File.WriteAllBytesAsync(filePath, file.FileContent.ToByteArray());
+            //        }
+            //    }
+            //}
         }
         
         public async Task<Common.GRPC.UploadResponse> UploadFileAsync(string fileName, byte[] fileContent)
