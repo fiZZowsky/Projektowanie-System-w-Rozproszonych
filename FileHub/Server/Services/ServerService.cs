@@ -115,6 +115,26 @@ namespace Server.Services
             }
         }
 
+        public override async Task<DownloadResponse> DownloadLocalFiles(DownloadRequest request, ServerCallContext context)
+        {
+            try
+            {
+                Console.WriteLine($"[Download] Requested by server.");
+                var response = await _filesService.GetLocalUserFiles(request);
+                Console.WriteLine($"[Download] Status seccessed: {response.Success}");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new DownloadResponse
+                {
+                    Success = false,
+                    Message = $"Error downloading files: {ex.Message}"
+                };
+            }
+
+        }
+
         public override async Task<DownloadByServerResponse> DownloadFileByServer(DownloadByServerRequest request, ServerCallContext context)
         {
             try

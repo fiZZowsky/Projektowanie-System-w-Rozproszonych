@@ -9,6 +9,7 @@ service DistributedFileServer {
     rpc GetNodes (google.protobuf.Empty) returns (NodeListResponse);
     rpc UploadFile (UploadRequest) returns (UploadResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
+    rpc DownloadLocalFiles (DownloadRequest) returns (DownloadResponse);
     rpc DownloadFileByServer (DownloadByServerRequest) returns (DownloadByServerResponse);
     rpc DeleteFile (DeleteRequest) returns (DeleteResponse);
     rpc DeleteFileFromServer (DeleteRequest) returns (DeleteResponse);

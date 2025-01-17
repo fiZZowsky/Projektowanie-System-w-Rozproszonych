@@ -17,9 +17,9 @@ namespace Client.Services
         {
             try
             {
-                _folderWatcher._watcher.Created -= _folderWatcher.OnFileCreated;
+                _folderWatcher._watcher.EnableRaisingEvents = false;
                 await _clientService.SyncFileFromServerAsync(request, null);
-                _folderWatcher._watcher.Created += _folderWatcher.OnFileCreated;
+                _folderWatcher._watcher.EnableRaisingEvents = true;
                 return new Common.GRPC.TransferResponse { Success = true, Message = "Pomyślnie odebrano plik od serwera." };
             }
             catch (Exception ex)
@@ -33,9 +33,9 @@ namespace Client.Services
         {
             try
             {
-                _folderWatcher._watcher.Deleted -= _folderWatcher.OnFileDeleted;
+                _folderWatcher._watcher.EnableRaisingEvents = false;
                 await _clientService.SyncFileFromServerAsync(null, request);
-                _folderWatcher._watcher.Deleted += _folderWatcher.OnFileDeleted;
+                _folderWatcher._watcher.EnableRaisingEvents = true;
                 return new Common.GRPC.DeleteResponse { Success = true, Message = "Pomyślnie odebrano komendę delete od serwera." };
             }
             catch (Exception ex)

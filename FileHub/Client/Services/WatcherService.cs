@@ -22,8 +22,10 @@ namespace Client.Services
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite,
                 Filter = "*.*",
                 IncludeSubdirectories = true,
-                EnableRaisingEvents = true
+                EnableRaisingEvents = false
             };
+
+            GetUserFilesAfterSync();
 
             _watcher.Created += OnFileCreated;
             _watcher.Deleted += OnFileDeleted;
@@ -31,28 +33,15 @@ namespace Client.Services
             _watcher.Changed += OnFileChanged;
         }
 
-        private bool ShouldProcessEvent(string filePath, int debounceMilliseconds = 1000)
+        public async void GetUserFilesAfterSync()
         {
-            var now = DateTime.Now;
-            if (_fileEventTimestamps.TryGetValue(filePath, out var lastEventTime))
-            {
-                if ((now - lastEventTime).TotalMilliseconds < debounceMilliseconds)
-                {
-                    return false;
-                }
-            }
-            _fileEventTimestamps[filePath] = now;
-            return true;
+            await _clientService.GetUserFilesAsync();
+
+            _watcher.EnableRaisingEvents = true;
         }
 
         public async void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            if (!ShouldProcessEvent(e.FullPath))
-            {
-                Debug.WriteLine($"[FolderWatcher] Ignorowanie zdarzenia: {e.FullPath}");
-                return;
-            }
-
             const int maxFileSize = 4 * 1024 * 1024; // 4 MB
 
             Debug.WriteLine($"[FolderWatcher] Plik utworzony: {e.FullPath}");
@@ -73,7 +62,9 @@ namespace Client.Services
                 try
                 {
                     var fileContent = File.ReadAllBytes(e.FullPath);
+                    _watcher.EnableRaisingEvents = false;
                     var response = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                    _watcher.EnableRaisingEvents = true;
 
                     if (!response.Success)
                     {
@@ -89,8 +80,6 @@ namespace Client.Services
 
         public async void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            if (!ShouldProcessEvent(e.FullPath)) return;
-
             Debug.WriteLine($"[FolderWatcher] Plik usunięty: {e.FullPath}");
 
             string fileName = Path.GetFileName(e.FullPath);
@@ -105,8 +94,6 @@ namespace Client.Services
 
         public async void OnFileRenamed(object sender, RenamedEventArgs e)
         {
-            if (!ShouldProcessEvent(e.FullPath)) return;
-
             Debug.WriteLine($"[FolderWatcher] Plik zmieniony z {e.OldFullPath} na {e.FullPath}");
 
             string oldFileName = Path.GetFileName(e.OldFullPath);
@@ -133,8 +120,6 @@ namespace Client.Services
 
         public async void OnFileChanged(object sender, FileSystemEventArgs e)
         {
-            if (!ShouldProcessEvent(e.FullPath)) return;
-
             Debug.WriteLine($"[FolderWatcher] Plik zmieniony: {e.FullPath}");
 
             try
@@ -143,7 +128,9 @@ namespace Client.Services
                 {
                     var fileContent = File.ReadAllBytes(e.FullPath);
 
+                    _watcher.EnableRaisingEvents = false;
                     var uploadResponse = await _clientService.UploadFileAsync(e.FullPath, fileContent);
+                    _watcher.EnableRaisingEvents = true;
 
                     if (!uploadResponse.Success)
                     {
