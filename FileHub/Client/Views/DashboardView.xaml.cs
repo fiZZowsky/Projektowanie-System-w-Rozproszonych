@@ -128,7 +128,7 @@ namespace Client.Views
                         MessageBox.Show($"Wystąpił błąd podczas synchronizacji danych: {ex.Message}.\nSynchronizuj dane ponownie.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
 
-                    await Task.Delay(180000); // 3 minuty
+                    await Task.Delay(60000); // co 1 minute
                 }
             })
             { IsBackground = true }.Start();
