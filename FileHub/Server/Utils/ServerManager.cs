@@ -36,6 +36,7 @@ public class ServerManager
             Console.WriteLine($"[Server {_port}] Using existing storage directory: {_storageDirectory}");
         }
 
+        _dhtService.SetStorageDirectory(_storageDirectory);
         _serverService = new ServerService(_storageDirectory, _dhtService);
 
         var server = new Grpc.Core.Server

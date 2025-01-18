@@ -139,16 +139,51 @@ namespace Server.Services
         {
             try
             {
-                var filePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName + "\\Server\\DataStorage\\", request.FileName);
+                var filePath = Path.Combine(_path, request.FileName);
+
                 if (File.Exists(filePath))
                 {
+                    // Sprawdzamy, czy plik jest w użyciu
+                    bool fileLocked = true;
+                    DateTime startTime = DateTime.Now;
+
+                    while (fileLocked && (DateTime.Now - startTime).TotalMinutes < 1)
+                    {
+                        try
+                        {
+                            // Próbujemy otworzyć plik do odczytu z blokadą
+                            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                            {
+                                fileLocked = false; // Plik jest dostępny
+                            }
+                        }
+                        catch (IOException)
+                        {
+                            // Jeśli plik jest w użyciu przez inny proces, ponownie spróbujemy
+                            await Task.Delay(1000);
+                        }
+                    }
+
+                    if (fileLocked)
+                    {
+                        return new DownloadByServerResponse
+                        {
+                            Success = false,
+                            Message = "File is currently in use and could not be accessed within the time limit.",
+                            Files = { }
+                        };
+                    }
+
+                    // Jeśli plik jest dostępny, odczytujemy jego zawartość
                     var fileContent = await File.ReadAllBytesAsync(filePath);
+                    var fileInfo = new FileInfo(filePath);
+                    var decodedFile = await FormatConverter.DecodeFileDataFromName(fileInfo);
                     var fileData = new FileData
                     {
                         FileName = request.FileName,
                         FileContent = ByteString.CopyFrom(fileContent),
-                        FileType = "application/octet-stream", // Zmień w zależności od typu pliku
-                        CreationDate = Timestamp.FromDateTime(File.GetCreationTime(filePath).ToUniversalTime())
+                        FileType = decodedFile.FileType,
+                        CreationDate = decodedFile.CreationDate
                     };
 
                     return new DownloadByServerResponse
@@ -178,6 +213,7 @@ namespace Server.Services
                 };
             }
         }
+
 
         public override async Task<DeleteResponse> DeleteFile(DeleteRequest request, ServerCallContext context)
         {
@@ -269,9 +305,17 @@ namespace Server.Services
         {
             try
             {
-                var filePath = Path.Combine(_path, request.FileName);
-                await File.WriteAllBytesAsync(filePath, request.FileContent.ToByteArray());
-                return new TransferResponse { Success = true, Message = "File transferred successfully." };
+                var transferRequest = new UploadRequest
+                {
+                    CreationDate = request.CreationDate,
+                    FileContent = request.FileContent,
+                    FileName = request.FileName,
+                    FileType = request.FileType,
+                    UserId = request.UserId
+                };
+
+                var response = await _filesService.SaveFile(transferRequest);
+                return new TransferResponse { Success = response.Success, Message = "File transferred successfully." };
             }
             catch (Exception ex)
             {

@@ -1,8 +1,11 @@
 ﻿using Common;
+using Common.Converters;
 using Common.GRPC;
 using Common.Models;
+using Google.Protobuf;
 using Grpc.Net.Client;
 using Server.Utils;
+using System.IO;
 using System.Text.Json;
 
 namespace Server.Services
@@ -12,8 +15,7 @@ namespace Server.Services
         private readonly int _port;
         private readonly MulticastService _multicastService;
         private readonly List<DHTNode> _nodes = new List<DHTNode>();
-        private readonly Dictionary<string, string> _fileToNodeMap = new Dictionary<string, string>(); // Mapowanie plików na serwery
-        private readonly string _storageDirectory;
+        private string _storageDirectory;
 
         public DHTService(int port, MulticastService multicastService)
         {
@@ -47,8 +49,7 @@ namespace Server.Services
 
         public async void UpdateNodesList(List<int> ports)
         {
-            int currport = _port;
-            foreach(var port in ports)
+            foreach (var port in ports)
             {
                 await AddNode(port);
             }
@@ -64,7 +65,7 @@ namespace Server.Services
                 RecalculateResponsibilities();
                 await RebalanceFiles(node);
 
-                if(storageDirectoryPath != null)
+                if (storageDirectoryPath != null)
                 {
                     var files = Directory.GetFiles(storageDirectoryPath).ToList();
 
@@ -125,7 +126,7 @@ namespace Server.Services
             }
         }
 
-        private async Task RebalanceFiles(DHTNode removedNode = null)
+        public async Task RebalanceFiles(DHTNode removedNode = null)
         {
             Console.WriteLine("[DHT] Rebalancing files...");
 
@@ -133,29 +134,87 @@ namespace Server.Services
 
             if (removedNode != null)
             {
-                Console.WriteLine($"[DHT] Redistributing files from removed node: {removedNode.Port}");
-                var successorNode = _nodes.OrderBy(n => n.Hash).FirstOrDefault(n => n.Hash > removedNode.Hash)
-                                    ?? _nodes.OrderBy(n => n.Hash).First();
-
-                foreach (var file in _fileToNodeMap.Keys.Where(f => _fileToNodeMap[f] == removedNode.Address).ToList())
+                if(_port == AppConfig.StartPort)
                 {
-                    _fileToNodeMap[file] = successorNode.Address;
-                    bool result = await TransferFile(file, removedNode, successorNode);
-                    rebalancingResults.Add(result);
+                    Console.WriteLine($"[DHT] Redistributing files from removed node: {removedNode.Port}");
+
+                    string[] directories = Directory.GetDirectories(AppConfig.DefaultFilesStoragePath, $"{removedNode.Port}*");
+
+                    // Przenosimy pliki z usuniętego węzła na inne węzły
+                    foreach (var directory in directories)
+                    {
+                        if (Path.GetFileName(directory).StartsWith(removedNode.Port.ToString()))
+                        {
+                            string[] files = Directory.GetFiles(directory);
+                            foreach (var file in files)
+                            {
+                                var successorNode = DHTManager.FindResponsibleNode(file, _nodes);
+
+                                if (File.Exists(file))
+                                {
+                                    // Sprawdzamy, czy plik jest w użyciu
+                                    bool fileLocked = true;
+                                    DateTime startTime = DateTime.Now;
+
+                                    while (fileLocked && (DateTime.Now - startTime).TotalMinutes < 1)
+                                    {
+                                        try
+                                        {
+                                            // Próbujemy otworzyć plik do odczytu z blokadą
+                                            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
+                                            {
+                                                fileLocked = false; // Plik jest dostępny
+                                            }
+                                        }
+                                        catch (IOException)
+                                        {
+                                            // Jeśli plik jest w użyciu przez inny proces, ponownie spróbujemy
+                                            await Task.Delay(1000);
+                                        }
+                                    }
+
+                                    if (fileLocked)
+                                    {
+                                        rebalancingResults.Add(false);
+                                        Console.WriteLine("[DHT] File is currently in use and could not be accessed within the time limit.");
+                                    }
+
+                                    // Jeśli plik jest dostępny, odczytujemy jego zawartość
+                                    var fileContent = await File.ReadAllBytesAsync(file);
+                                    var fileInfo = new FileInfo(file);
+                                    var decodedFile = await FormatConverter.DecodeFileDataFromName(fileInfo);
+                                    var fileData = new FileData
+                                    {
+                                        FileName = decodedFile.FileName,
+                                        FileContent = ByteString.CopyFrom(fileContent),
+                                        FileType = decodedFile.FileType,
+                                        CreationDate = decodedFile.CreationDate,
+                                        UserId = decodedFile.UserId,
+                                    };
+
+                                    bool result = await TransferFile(fileData, file, removedNode, successorNode);
+                                    rebalancingResults.Add(result);
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            foreach (var file in _fileToNodeMap.Keys)
+            else
             {
-                var newResponsibleNode = FindResponsibleNode(file);
-                if (_fileToNodeMap[file] != newResponsibleNode.Address)
+                if (_storageDirectory != null)
                 {
-                    var currentNode = _nodes.FirstOrDefault(n => n.Address == _fileToNodeMap[file]);
-                    _fileToNodeMap[file] = newResponsibleNode.Address;
-                    if (currentNode != null)
+                    string[] files = Directory.GetFiles(_storageDirectory);
+                    foreach (var file in files)
                     {
-                        bool result = await TransferFile(file, currentNode, newResponsibleNode);
-                        rebalancingResults.Add(result);
+                        var successorNode = DHTManager.FindResponsibleNode(file, _nodes);
+                        if (successorNode.Port != _port)
+                        {
+                            var currentNode = _nodes.First(x => x.Port == _port);
+                            var relativeFilePath = file.Replace($"{_storageDirectory}\\", string.Empty);
+                            bool result = await TransferFile(relativeFilePath, currentNode, successorNode);
+                            rebalancingResults.Add(result);
+                        }
                     }
                 }
             }
@@ -177,8 +236,8 @@ namespace Server.Services
             try
             {
                 // Stworzenie kanału gRPC dla źródłowego i docelowego węzła
-                var sourceChannel = GrpcChannel.ForAddress($"{AppSettings.DefaultAddress}:{sourceNode.Port}");
-                var targetChannel = GrpcChannel.ForAddress($"{AppSettings.DefaultAddress}:{targetNode.Port}");
+                var sourceChannel = GrpcChannel.ForAddress($"http://{AppSettings.DefaultAddress}:{sourceNode.Port}");
+                var targetChannel = GrpcChannel.ForAddress($"http://{AppSettings.DefaultAddress}:{targetNode.Port}");
 
                 var sourceClient = new DistributedFileServer.DistributedFileServerClient(sourceChannel);
                 var targetClient = new DistributedFileServer.DistributedFileServerClient(targetChannel);
@@ -234,13 +293,57 @@ namespace Server.Services
             }
         }
 
-        public DHTNode FindResponsibleNode(string fileName)
+        private async Task<bool> TransferFile(FileData file, string fullFilePath, DHTNode sourceNode, DHTNode targetNode)
         {
-            var fileHash = DHTManager.ComputeHash(fileName);
-            return _nodes.FirstOrDefault(n => n.Hash >= fileHash) ?? _nodes.First();
+            Console.WriteLine($"[DHT] Transferring file {file.FileName} from {sourceNode.Port} to {targetNode.Port}...");
+
+            try
+            {
+                // Stworzenie kanału gRPC dla docelowego węzła
+                var targetChannel = GrpcChannel.ForAddress($"http://{AppSettings.DefaultAddress}:{targetNode.Port}");
+
+                var targetClient = new DistributedFileServer.DistributedFileServerClient(targetChannel);
+
+                // Przekazujemy plik na nowy serwer
+                var transferResponse = await targetClient.TransferFileAsync(new TransferRequest
+                {
+                    FileName = file.FileName,
+                    FileContent = file.FileContent,
+                    FileType = file.FileType,
+                    CreationDate = file.CreationDate,
+                    UserId = file.UserId
+                });
+                if (transferResponse.Success)
+                {
+                    Console.WriteLine($"[DHT] File {file.FileName} transferred successfully from {sourceNode.Port} to {targetNode.Port}.");
+
+                    if (File.Exists(fullFilePath))
+                    {
+                        File.Delete(fullFilePath);
+                        Console.WriteLine($"[DHT] File {file.FileName} deleted from source node {sourceNode.Port}.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[DHT] File {file.FileName} not found on source node {sourceNode.Port}.");
+                    }
+
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"[DHT] Error transferring file: {transferResponse.Message}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DHT] Error during file transfer: {ex.Message}");
+                return false;
+            }
         }
 
         public List<DHTNode> GetNodes() => _nodes;
         public int GetServerPort() => _port;
+        public void SetStorageDirectory(string dir) => _storageDirectory = dir;
     }
 }

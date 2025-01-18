@@ -39,7 +39,8 @@ public class FormatConverter
             FileName = fileName,
             FileContent = Google.Protobuf.ByteString.CopyFrom(fileContent),
             FileType = fileType,
-            CreationDate = DateTimeConverter.ConvertToTimestamp(creationDate)
+            CreationDate = DateTimeConverter.ConvertToTimestamp(creationDate),
+            UserId = userId,
         };
 
         return fileData;
